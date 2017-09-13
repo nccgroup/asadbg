@@ -1,0 +1,119 @@
+[
+    {
+        "ASLR": false, 
+        "glibc_version": "2.9", 
+        "addresses": {
+            "clock_interval": 38760808, 
+            "mempool_array": 57678848, 
+            "socks_proxy_server_start": 19283008, 
+            "aaa_admin_authenticate": 252672
+        }, 
+        "fw": "asa924-k8.bin", 
+        "stripped": false, 
+        "PIE": false, 
+        "Canary": false, 
+        "RELRO": false, 
+        "NX": false, 
+        "uname": "Linux version 2.6.29.6 (builders@releng02) (gcc version 4.3.4 (crosstool-NG-1.5.0) ) #1 PREEMPT Tue Jul 14 21:53:19 PDT 2015", 
+        "version": "9.2.4", 
+        "imagebase": 134512640, 
+        "heap_alloc": "dlmalloc 2.8.3", 
+        "arch": 32, 
+        "exported_symbols": false
+    }, 
+    {
+        "ASLR": false, 
+        "glibc_version": "2.9", 
+        "addresses": {
+            "clock_interval": 54682764, 
+            "mempool_array": 91016512, 
+            "socks_proxy_server_start": 20181808, 
+            "aaa_admin_authenticate": 277664
+        }, 
+        "fw": "asa924-smp-k8.bin", 
+        "stripped": false, 
+        "PIE": false, 
+        "Canary": false, 
+        "RELRO": false, 
+        "NX": false, 
+        "uname": "Linux version 2.6.29.6 (builders@releng02) (gcc version 4.3.4 (crosstool-NG-1.5.0) ) #1 SMP Tue Jul 14 22:22:33 PDT 2015", 
+        "version": "9.2.4", 
+        "imagebase": 4194304, 
+        "heap_alloc": "dlmalloc 2.8.3", 
+        "arch": 64, 
+        "exported_symbols": false
+    }, 
+    {
+        "ASLR": false, 
+        "glibc_version": "2.18", 
+        "addresses": {
+            "clock_interval": 59514112, 
+            "socks_proxy_server_start": 22139744, 
+            "aaa_admin_authenticate": 418288
+        }, 
+        "fw": "asav941-200.qcow2", 
+        "stripped": false, 
+        "PIE": false, 
+        "Canary": false, 
+        "RELRO": false, 
+        "NX": false, 
+        "uname": "Linux version 3.10.55-ltsi-WR6.0.0.13_standard (builders@releng25) (gcc version 4.8.1 (Wind River Linux Sourcery CodeBench 4.8-39) ) #1 SMP Mon May 11 16:05:42 PDT 2015", 
+        "version": "9.4.1.200", 
+        "imagebase": 4194304, 
+        "heap_alloc": "ptmalloc 2.x", 
+        "arch": 64, 
+        "exported_symbols": false
+    }, 
+    {
+        "imagebase": 0, 
+        "version": "9.6.1", 
+        "arch": 64, 
+        "addresses": {
+            "clock_interval": 81190912, 
+            "socks_proxy_server_start": 40124064, 
+            "aaa_admin_authenticate": 14435712
+        }, 
+        "fw": "asa961-smp-k8.bin"
+    }, 
+    {
+        "ASLR": true, 
+        "glibc_version": "2.18", 
+        "addresses": {
+            "clock_interval": 82433376, 
+            "socks_proxy_server_start": 41070608, 
+            "aaa_admin_authenticate": 14672928
+        }, 
+        "fw": "asav962-7.qcow2", 
+        "stripped": false, 
+        "PIE": true, 
+        "Canary": false, 
+        "RELRO": false, 
+        "NX": true, 
+        "uname": "Linux version 3.10.62-ltsi-WR6.0.0.27_standard (builders@releng28) (gcc version 4.8.1 (Wind River Linux Sourcery CodeBench 4.8-47) ) #1 SMP Mon Dec 5 11:38:37 PST 2016", 
+        "version": "9.6.2.7", 
+        "imagebase": 93824992231424, 
+        "heap_alloc": "ptmalloc 2.x", 
+        "arch": 64, 
+        "exported_symbols": true
+    },
+    {
+        "RELRO": false,
+        "imagebase": 93824992231424,
+        "addresses": {
+            "clock_interval": 79485440, 
+            "socks_proxy_server_start": 36952512, 
+            "aaa_admin_authenticate": 9611376
+        }, 
+        "fw": "asav981-5.qcow2",
+        "PIE": true,
+        "ASLR": true,
+        "glibc_version": "2.18",
+        "arch": 64,
+        "version": "9.8.1.5",
+        "Canary": false,
+        "exported_symbols": false,
+        "NX": true,
+        "stripped": false,
+        "heap_alloc": "ptmalloc 2.x"
+    }
+]

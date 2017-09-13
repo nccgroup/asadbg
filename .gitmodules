@@ -1,0 +1,12 @@
+[submodule "libmempool"]
+	path = libmempool
+	url = https://github.com/nccgroup/libmempool.git
+[submodule "libptmalloc"]
+	path = libptmalloc
+	url = https://github.com/nccgroup/libptmalloc.git
+[submodule "libdlmalloc"]
+	path = libdlmalloc
+	url = https://github.com/nccgroup/libdlmalloc.git
+[submodule "ret-sync"]
+	path = ret-sync
+	url = https://github.com/saidelike/ret-sync.git

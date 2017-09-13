@@ -1,0 +1,76 @@
+# This file is part of asadbg.
+# Copyright (c) 2017, Aaron Adams <aaron.adams(at)nccgroup(dot)trust>
+# Copyright (c) 2017, Cedric Halbronn <cedric.halbronn(at)nccgroup(dot)trust>
+#
+# Main gdbinit script to get a valid environment in gdb
+# Usage: can't be used as standalone. Needs to be loaded/patched by asadbg.py
+#
+# gdb needs to be started with right privileges to debug the serial
+
+source ignore_errors.py
+
+# setup file and paths
+printf "[gdbinit_%VERSION%] Configuring paths...\n"
+file %LINA%
+set solib-absolute-prefix %PREFIX%
+
+set disassembly-flavor intel
+# disable the "Type <return> to continue, or q <return> to quit" pagination prompt in GDB
+printf "[gdbinit_%VERSION%] Disabling pagination...\n"
+set height 0
+set pagination off
+
+if %TCPIP% == 1
+    printf "[gdbinit_%VERSION%] Connecting over TCP/IP...\n"
+    # uncomment this if you want to see why a connection to TCP/IP fails
+    #set debug remote 1
+    target remote %REMOTE_IP%:%REMOTE_PORT%
+    printf "[gdbinit_%VERSION%] Connected.\n"
+end
+if %SERIAL% == 1
+    printf "[gdbinit_%VERSION%] Connecting over USB...\n"
+    target extended-remote %DEVTTY%
+    printf "[gdbinit_%VERSION%] Connected.\n"
+end
+
+#set follow-fork-mode child
+
+if %FINDLINAPID% == 1
+    source find_lina_pid.py
+end
+
+# *clock_interval = 0 (version specific)
+set *%WATCHDOG_TIMEOUT_ADDR% = 0
+printf "[gdbinit_%VERSION%] Watchdog disabled\n"
+
+source asa_libmempool.py
+if %ARCH32% == 1
+    source asa_libdlmalloc.py
+    dlcallback register mpcallback libmempool/libmempool
+end
+if %ARCH64% == 1
+    source asa_libptmalloc.py
+    ptcallback register mpcallback libmempool/libmempool
+    # some dlmalloc structures used even on 64-bit
+    source asa_libdlmalloc.py
+    dlcallback register mpcallback libmempool/libmempool
+end
+printf "[gdbinit_%VERSION%] heap debugging plugins loaded\n"
+
+%SCRIPTS%
+printf "[gdbinit_%VERSION%] Additional gdb scripts loaded\n"
+
+if %RETSYNC% == 1
+    printf "[gdbinit_%VERSION%] Syncing...\n"
+    source asa_sync.py
+    ignore-errors sync
+end
+if %DISPLAY% == 1
+    display /5i $pc
+end
+if %CONTINUE% == 1
+    printf "[gdbinit_%VERSION%] Continuing...\n"
+    continue
+end
+
+printf "[gdbinit_%VERSION%] Done.\n"
