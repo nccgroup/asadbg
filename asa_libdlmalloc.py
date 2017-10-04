@@ -26,9 +26,9 @@ class logger:
     def logmsg(self, s, end=None):
         if type(s) == str:
             if end != None:
-                print("[libdlmalloc] " + s, end=end)
+                print("[asa_libdlmalloc] " + s, end=end)
             else:
-                print("[libdlmalloc] " + s)
+                print("[asa_libdlmalloc] " + s)
         else:
             print(s)
 

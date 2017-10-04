@@ -7,7 +7,8 @@
 # This contains helpers for other parts. Note that some of them are common
 # to several projects: libdlmalloc, libptmalloc, libmempool, etc.
 
-import os, re, json, pickle, gdb
+import traceback
+import os, re, json, pickle, gdb, sys
 import helper as h
 import importlib
 importlib.reload(h)
@@ -26,3 +27,89 @@ def get_info():
     if not bin_name:
         raise("get_info: failed to find bin name")
     return bin_name
+
+def get_arch():
+    res = gdb.execute("maintenance info sections ?", to_string=True)
+    if "elf32-i386" in res and "elf64-x86-64" in res:
+        raise("get_arch: could not determine arch (1)")
+    if "elf32-i386" not in res and "elf64-x86-64" not in res:
+        raise("get_arch: could not determine arch (2)")
+    if "elf32-i386" in res:
+        return "elf32-i386"
+    elif "elf64-x86-64" in res:
+        return "elf64-x86-64"
+    else:
+        raise("get_arch: failed to find arch")
+
+def get_inferior():
+    try:
+        if len(gdb.inferiors()) == 0:
+            print("No gdb inferior could be found.")
+            return -1
+        else:
+            inferior = gdb.inferiors()[0]
+            return inferior
+    except AttributeError:
+        print("This gdb's python support is too old.")
+        exit()
+
+def has_inferior(f):
+    "decorator to make sure we have an inferior to operate on"
+
+    @wraps(f)
+    def with_inferior(*args, **kwargs):
+        inferior = get_inferior()
+        if inferior != -1:
+            if (inferior.pid != 0) and (inferior.pid is not None):
+                return f(*args, **kwargs)
+            else:
+                print("No debugee could be found.  Attach or start a program.")
+                exit()
+        else:
+            exit()
+    return with_inferior
+
+def retrieve_sizesz():
+    "Retrieve the SIZE_SZ after binary loading finished, this allows import within .gdbinit"
+    #global SIZE_SZ
+
+    _machine = get_arch()
+
+    if "elf64" in _machine:
+        SIZE_SZ = 8
+    elif "elf32" in _machine:
+        SIZE_SZ = 4
+    else:
+        raise Exception("Retrieving the SIZE_SZ failed.")
+
+    if SIZE_SZ == 4:
+        pass
+    elif SIZE_SZ == 8:
+        pass
+    
+    return SIZE_SZ
+
+# Taken from gef. Let's us see proper backtraces from python exceptions
+def show_last_exception():
+    PYTHON_MAJOR = sys.version_info[0]
+    horizontal_line = "-"
+    right_arrow = "->"
+    down_arrow = "\\->"
+
+    print("")
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    print(" Exception raised ".center(80, horizontal_line))
+    print("{}: {}".format(exc_type.__name__, exc_value))
+    print(" Detailed stacktrace ".center(80, horizontal_line))
+    for fs in traceback.extract_tb(exc_traceback)[::-1]:
+        if PYTHON_MAJOR==2:
+            filename, lineno, method, code = fs
+        else:
+            try:
+                filename, lineno, method, code = fs.filename, fs.lineno, fs.name, fs.line
+            except:
+                filename, lineno, method, code = fs
+
+        print("""{} File "{}", line {:d}, in {}()""".format(down_arrow, filename,
+                                                            lineno, method))
+        print("   {}    {}".format(right_arrow, code))

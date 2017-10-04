@@ -26,7 +26,7 @@ import paramiko
 import time
 import argparse
 import sys, re
-import os, serial, socket
+import os, serial, socket, threading
 from telnetlib import Telnet
 
 def logmsg(s, end=None):
@@ -202,7 +202,7 @@ class Comm:
         self.ser.write(bytes(data + "\n", encoding="UTF-8"))
         return
 
-    def init_ssh(self, host, user, password):
+    def init_ssh(self, host, user, password, connectOnly=False):
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
@@ -210,6 +210,8 @@ class Comm:
         except Exception as e:
             print("Unable to connect over SSH: %s" % str(e))
             sys.exit(0)
+        if connectOnly:
+            return
         self.ssh_stdin, self.ssh_stdout, self.ssh_stderr = self.ssh.exec_command('enable\n')
         self.ssh_stdin.write('\n')
 
@@ -364,18 +366,18 @@ def logoff_webvpn_sessions(comm, show=False):
 def compute_md5(comm, filename, show=False):
     execute_cmd(comm, "verify /md5 %s\n" % filename, show=False, config_t=True, read=False)
     comm.flush()
-    print("Calculating MD5. Will take 20 seconds... ", end='', flush=True)
+    logmsg("Calculating MD5. Will take 20 seconds... ", end='', flush=True)
     buf = comm.read(wait=20)
     if "(No such file or directory)" in buf:
-        print("File %s not found. Skipping it" % filename)
+        logmsg("File %s not found. Skipping it" % filename)
         sys.exit()
     try:
         res = buf.split('=')[1][1:33]
     except IndexError:
-        print("[!] Can't find MD5")
+        logmsg("[!] Can't find MD5")
         print(buf)
     else:
-        print("%s = %s" % (filename, res))
+        logmsg("%s = %s" % (filename, res))
 
 ############ Boot sequence parsing (over serial) ############
             
@@ -727,6 +729,82 @@ def detect_crash_over_console(ser):
             break
     return ret
 
+############ Debug shell ############
+
+# Interact with debug shell
+def gdb_ctrl_c_thread_interact(revHost, revPort):
+    from telnetlib import Telnet
+
+    logmsg("Thread: Listening on %s:%d..." % (revHost, revPort))
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.settimeout(10)
+    s.bind((revHost, revPort))
+    s.listen(5)
+    try:
+        cli = s.accept()[0]
+    except socket.timeout:
+        logmsg("Thread: [!] Nothing received after 10 seconds. Try pinging the router to check if it is still alive?")
+    else:
+        s.close()
+        logmsg("Thread: Got connect-back")
+        # We wait a bit so the Python main thread can finish establishing the SSH connection
+        # and effectively be waiting for this 2nd thread to finish
+        time.sleep(0.5)
+
+        t = Telnet()
+        t.sock = cli
+        data = t.read_until(b"#")
+        if b"sh: no job control in this shell" not in data and b"/bin/sh: can't access tty;" not in data:
+            logmsg("[!] Warning: not a debug shell?")
+            print(data)
+            t.close()
+            return
+        t.write(b"ps aux|grep lina\n")
+        data = t.read_until(b"#")
+        lines = data.split(b"\n")
+        pid = None
+        for l in lines:
+            # Output is different based on busybox. Parses one of the below:
+            # b'root      1673  2.9 25.5 1588464 436188 ?      S<Ll Sep29 133:17 /asa/bin/lina -p 1625 -t -g -l'
+            # b'  518 root     /asa/bin/lina -p 513 -t -g -l'
+            # but we want to avoid the gdbserver one:
+            # b'  515 root     gdbserver /dev/ttyS0 /asa/bin/lina -p 513 -t -g -l'
+            if b"/asa/bin/lina -p" in l and b"gdbserver" not in l:
+                elts = l.split()
+                try:
+                    pid = int(elts[1])
+                except ValueError:
+                    pid = int(elts[0])
+                logmsg("Thread: Found lina PID: %d" % pid)
+                break
+        if pid == None:
+            logmsg("Thread: Error: Can't find lina PID")
+            t.close()
+            return
+        logmsg("Thread: Sending SIGTRAP to lina PID")
+        t.write(bytes("kill -5 %d\n" % pid, encoding="utf-8"))
+        #data = t.read_until(b"#")
+        t.close()
+        logmsg("Thread: Done")
+
+# 4444 is the port we use everywhere else for the debug shell
+# so we can safely hardcode it
+def gdb_ctrl_c_main(comm, target_ip, user, password, revHost="0.0.0.0", revPort=4444):
+    th = threading.Thread(target=gdb_ctrl_c_thread_interact, args=(revHost, revPort))
+    th.daemon = True
+    th.start()
+    
+    logmsg("Triggering SSH connection")
+    comm.init_ssh(target_ip, user, password, connectOnly=True)
+
+    logmsg("Waiting for thread to finish")
+    while True:
+        th.join(10000)
+        if not th.isAlive():
+            break
+    logmsg("Done")
+
 ############ main ############
 
 if __name__ == '__main__':
@@ -754,6 +832,8 @@ if __name__ == '__main__':
                         help='Delete WebVPN sessions (serial, SSH)')
     parser.add_argument('--md5', dest='md5', default=False,
                         action="store_true", help="Compute MD5 for files (serial, SSH)")
+    parser.add_argument('--ctrlc', dest='ctrlc', default=False,
+                        action="store_true", help="Simulate a CTRL^C in GDB by interacting with the debug shell")
     parser.add_argument('--input', dest='input', default=None, nargs="*", 
                         help='List of input files for other commands (eg: file1 file2 file3) (e.g.: --upload, --download, --md5)')
     parser.add_argument('--oldssh', default=False, action="store_true", 
@@ -774,7 +854,7 @@ if __name__ == '__main__':
 
     target_port = args.target_port
     comm_type = args.comm_type
-    if args.upload != False or args.download != False or args.md5 != False:
+    if args.upload != False or args.download != False or args.md5 != False or args.ctrlc != False:
         logmsg("Warning: using forced SSH")
         comm_type = PROTOCOL_SSH
 
@@ -874,6 +954,13 @@ if __name__ == '__main__':
                 comm.init_ssh(args.target_ip, user, password)
             comm.close()
             sys.exit()
+
+        if args.ctrlc == True:
+            #  we patched lina to accept any password when adding the debug shell
+            password = ""
+            gdb_ctrl_c_main(comm, args.target_ip, user, password)
+            sys.exit()
+            
 
     if args.cfg_file != None:
         with open(args.cfg_file, "r") as tmp:
