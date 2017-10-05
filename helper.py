@@ -39,7 +39,10 @@ def show_last_exception():
         if PYTHON_MAJOR==2:
             filename, lineno, method, code = fs
         else:
-            filename, lineno, method, code = fs.filename, fs.lineno, fs.name, fs.line
+            try:
+                filename, lineno, method, code = fs.filename, fs.lineno, fs.name, fs.line
+            except:
+                filename, lineno, method, code = fs
 
         print("""{} File "{}", line {:d}, in {}()""".format(down_arrow, filename,
                                                             lineno, method))

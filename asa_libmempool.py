@@ -10,27 +10,26 @@
 
 import os
 import sys
+import importlib
 
 # Our own libraries
 cwd = os.getcwd()
 sys.path.insert(0, cwd)
-from helper import *
-sys.path.insert(0, os.path.join(cwd, "libmempool"))
-import importlib
-import libmempool_gdb as lmp_gdb
-importlib.reload(lmp_gdb)
 import helper_gdb as hgdb
 importlib.reload(hgdb)
 import helper as h
 importlib.reload(h)
+sys.path.insert(0, os.path.join(cwd, "libmempool"))
+import libmempool_gdb as lmp_gdb
+importlib.reload(lmp_gdb)
 
 class logger:
     def logmsg(self, s, end=None):
         if type(s) == str:
             if end != None:
-                print("[libmempool] " + s, end=end)
+                print("[asa_libmempool] " + s, end=end)
             else:
-                print("[libmempool] " + s)
+                print("[asa_libmempool] " + s)
         else:
             print(s)
 
@@ -48,17 +47,8 @@ mp_global_symbols = {
     },
 }
 
-def get_info():
-    res = gdb.execute("maintenance info sections ?", to_string=True)
-    bin_name = os.path.basename(build_bin_name(res))
-    if not bin_name:
-        raise("get_info: failed to find bin name")
-    if bin_name[0] == '_':
-        return bin_name[1:]
-    return bin_name
-
 class mpsymbols(gdb.Command):
-    help_str = "mpsymbols                       : show ASA mempool symbols"
+    help_str = "mpsymbols   : show ASA mempool symbols"
 
     def __init__(self):
         super(mpsymbols, self).__init__("mpsymbols", gdb.COMMAND_DATA, gdb.COMPLETE_NONE)
@@ -128,5 +118,6 @@ if __name__ == "__main__":
     lmp_gdb.mpheader(mh_version=mps.mh_version)
     lmp_gdb.mpbin(mh_version=mps.mh_version)
     lmp_gdb.mpmstate(mh_version=mps.mh_version)
+    lmp_gdb.mpfindchunk(mh_version=mps.mh_version)
 
     log.logmsg("loaded")

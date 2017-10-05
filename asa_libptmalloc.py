@@ -11,17 +11,17 @@
 import os
 import sys
 import traceback
+import re
 
 # Our own libraries
 cwd = os.getcwd()
 sys.path.insert(0, cwd)
-#from helper import *
 import importlib
+import helper_gdb as hgdb
+importlib.reload(hgdb)
 sys.path.insert(0, os.path.join(cwd, "libptmalloc"))
 import libptmalloc2 as libpt
 importlib.reload(libpt)
-import helper_gdb as hgdb
-importlib.reload(hgdb)
 
 class logger:
     def logmsg(self, s, end=None):
@@ -107,5 +107,7 @@ if __name__ == "__main__":
     libpt.ptsearch(pth)
     libpt.ptstats(pth)
     libpt.ptbin(pth)
+    libpt.ptarenaof(pth)
+    libpt.ptscanchunks(pth)
 
     log.logmsg("loaded")
