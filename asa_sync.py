@@ -41,8 +41,8 @@ def logmsg(s, end=None):
 mappings_config = {
     # In 32-bit, there is no ASLR and the layout is always the same
     "32_default": [
-        [0xffff0000, 0xffffffff, 0x0000ffff, "%bin_name%|kernel"],
         [0x08048000, 0x0B74ae20, 0x03702e20, "%bin_name%|lina"],
+        [0xdc701000, 0xdc71e1f8, 0x1d1f8, "%bin_name%|libexpat"],
     ],
 
     # In 64-bit ASLR-enabled firmware, we need to have previously disabled 
