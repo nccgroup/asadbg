@@ -357,7 +357,8 @@ if __name__ == '__main__':
                 sys.exit()
 
         if attach_gdb and firmware_type != "rooted" and firmware_type != "gdb":
-            logmsg("You need a gdb-enabled or rooted firmware to debug REAL ASA")
+            logmsg("ERROR: You need a gdb-enabled or rooted firmware to debug REAL ASA")
+            logmsg('ERROR: Specify "rooted" or "gdb" with firmware_type if this is the case')
             sys.exit()
         # We need to enable GDB at boot for rooted firmware only
         enable_gdb = False

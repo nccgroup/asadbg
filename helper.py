@@ -153,8 +153,9 @@ def merge_target(new_target, targets):
             # these keys come from info.py import
             if "imagebase" in t.keys() and "ASLR" in t.keys():
                     # special case for offset, not an address
-                if name.startswith("OFFSET_"):
+                if name.startswith("OFFSET_") or name.startswith("REG_"):
                     t["addresses"][name] = addr
+
                 elif t["ASLR"] == True:
                     # we assume ASLR imagebase has been set correctly to either 0
                     # or the value it has when ASLR is disabled for this fw
