@@ -306,16 +306,17 @@ if __name__ == '__main__':
     if args.asadb_file != None:
         asadb_file = args.asadb_file
 
-    try:
-        GDB = os.environ["GDB"]
-    except:
-        GDB="gdb"
-    logmsg("Using gdb: '%s'" % GDB)
+    if attach_gdb:
+        try:
+            GDB = os.environ["GDB"]
+        except:
+            GDB="gdb"
+        logmsg("Using gdb from path: '%s'" % GDB)
 
-    if not version:
-        logmsg("Error: You must specify a valid ASA version")
+    if attach_gdb and not version:
+        logmsg("Error: You must specify a valid ASA version for attaching to gdb")
         sys.exit()
-    if "." in version:
+    if version and "." in version:
         logmsg("Stripping dots from version: %s" % version)
         version = version.replace(".", "")
     if attach_gdb:
@@ -352,7 +353,7 @@ if __name__ == '__main__':
                 with open(serial_port, "r") as tmp:
                     tmp.close()
             except:
-                logmsg("Error: Can't access serial. It does not exist or you need root")
+                logmsg("Error: Can't access serial. It does not exist, is already used or you need root")
                 sys.exit()
 
         if attach_gdb and firmware_type != "rooted" and firmware_type != "gdb":
@@ -370,6 +371,10 @@ if __name__ == '__main__':
         ser = serial.Serial(serial_port, 9600, timeout=1)
         if reboot:
             comm.reboot_over_serial(ser)
+        if firmware == None:
+            logmsg("Warning: no firmware specified, using default firmware")
+        if config == None:
+            logmsg("Warning: no config specified, using default config")
         if firmware_type == "rooted":
             logmsg("Loading rooted '%s' with '%s'..." % (firmware, config))
             comm.boot_router_cli(ser, firmware, enable_gdb, boot_config=config)

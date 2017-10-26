@@ -12,17 +12,12 @@
 import configparser
 import os
 import configparser
+import sys
 
 # Our own libraries
 cwd = os.getcwd()
 sys.path.insert(0, cwd)
 from helper import *
-from helper_gdb import *
-# XXX - fix this so ret-sync can be anywhere?
-sys.path.insert(0, os.path.join(cwd, "ret-sync", "ext_gdb"))
-import sync as rs
-import importlib
-importlib.reload(rs)
 
 def logmsg(s, end=None):
     if type(s) == str:
@@ -70,6 +65,7 @@ global_mappings = {
     "asa922-4-k8.bin": mappings_config["32_default"],
     "asa923-k8.bin": mappings_config["32_default"],
     "asa924-k8.bin": mappings_config["32_default"],
+    "asa924-24-k8.bin": mappings_config["32_default"],
     "asav941-200.qcow2": mappings_config["64_noaslr"],
     "asa924-smp-k8.bin": mappings_config["64_noaslr"],
     "asav961.qcow2": mappings_config["64_aslr_disabled"],
@@ -91,6 +87,12 @@ def patch_mapping(mappings, binname):
 # such as a "fake" PID and the /proc/<pid>/mappings corresponding to the version we are currently
 # debugging
 if __name__ == "__main__":
+    from helper_gdb import *
+    # XXX - fix this so ret-sync can be anywhere?
+    sys.path.insert(0, os.path.join(cwd, "ret-sync", "ext_gdb"))
+    import sync as rs
+    import importlib
+    importlib.reload(rs)
     
     locations = [os.path.join(os.path.realpath(os.path.dirname(__file__)), ".sync"),
                  os.path.join(os.environ['HOME'], ".sync")]

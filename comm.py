@@ -285,6 +285,19 @@ def delay_checkheaps(comm, show=False):
     # But this will run every 24 days now so should be okay :P
     execute_cmd(comm, "checkheaps check-interval 2147483", config_t=True, show=show)
 
+def enable_checkheaps(comm, show=False):
+    logmsg("Enabling checkheaps every second now...")
+    comm.info()
+
+    # This is to force checkheaps to run very often
+    execute_cmd(comm, "checkheaps check-interval 1", config_t=True, show=show)
+    
+def show_checkheaps(comm, show=True):
+    logmsg("Showing checkheaps now...")
+    comm.info()
+
+    execute_cmd(comm, "show checkheaps", config_t=True, show=show)
+    
 def is_file_on_router(comm, filename, ip="192.168.210.77"):
     found = True
     comm.flush()
@@ -461,6 +474,20 @@ def boot_router_cli_non_rooted(ser, boot_firmware, boot_config=None):
             print(".", end='', flush=True)
         else:
             print(data, end='', flush=True)
+        # we check this first as we want to detect it even if it finished booting
+        if "WARNING: BOOT variable added, but unable to find disk0:/%s" % str(boot_config) in data or \
+            "ERROR: MIGRATION - Could not get the startup configuration." in data:
+            print("")
+            logmsg("Configuration file does not exist. Exiting now")
+            sys.exit()
+        if "This is an ASA image and cannot be loaded on a PIX platform" in data:
+            print("")
+            logmsg("Invalid firmware. Exiting now")
+            sys.exit()
+        if "Rebooting..." in data:
+            print("")
+            logmsg("ASA has rebooted, should not happen. Exiting now")
+            sys.exit()
         # avoid waiting 10 seconds
         if "Use SPACE to begin boot immediately." in data or " seconds." in data:
             serial_write(ser, " ")
@@ -476,11 +503,6 @@ def boot_router_cli_non_rooted(ser, boot_firmware, boot_config=None):
             "/dev/ttyS0" in data:
             logmsg("gdb detected - boot finished.")
             break
-        if "WARNING: BOOT variable added, but unable to find disk0:/%s" % str(boot_config) in data or \
-            "ERROR: MIGRATION - Could not get the startup configuration." in data:
-            print("")
-            logmsg("Configuration file does not exist. Exiting now")
-            sys.exit()
          
 
     logmsg("Boot should be finished now?")
@@ -594,6 +616,20 @@ def boot_router_cli(ser, boot_firmware, enable_gdb=False, boot_config=None):
             print(".", end='', flush=True)
         else:
             print(data, end='', flush=True)
+        # we check this first as we want to detect it even if it finished booting
+        if "WARNING: BOOT variable added, but unable to find disk0:/%s" % str(boot_config) in data or \
+            "ERROR: MIGRATION - Could not get the startup configuration." in data:
+            print("")
+            logmsg("Configuration file does not exist. Exiting now")
+            sys.exit()
+        if "This is an ASA image and cannot be loaded on a PIX platform" in data:
+            print("")
+            logmsg("Invalid firmware. Exiting now")
+            sys.exit()
+        if "Rebooting..." in data:
+            print("")
+            logmsg("ASA has rebooted, should not happen. Exiting now")
+            sys.exit()
         if "Remote debugging using /dev/ttyS0" in data or \
             "/dev/ttyS0" in data:
             break
@@ -602,11 +638,6 @@ def boot_router_cli(ser, boot_firmware, enable_gdb=False, boot_config=None):
             "ciscoasa>" in data:
             logmsg("CLI detected - boot finished.")
             break
-        if "WARNING: BOOT variable added, but unable to find disk0:/%s" % str(boot_config) in data or \
-            "ERROR: MIGRATION - Could not get the startup configuration." in data:
-            print("")
-            logmsg("Configuration file does not exist. Exiting now")
-            sys.exit()
 
     logmsg("Boot should be finished now?")
 
@@ -677,6 +708,9 @@ def reboot_over_serial(ser):
         # This tries to reboot it under the assumption it's in an init shell
         serial_write(ser, "reboot -f\n")
 
+def enable_checkheaps_over_serial(ser):
+    result = execute_cmd_over_serial("checkheaps check-interval 1", ser)
+    
 # We assume the ASA has been booted with the config file and with the ASA version that we want to 
 # use for the next boot (and all following ones). Consequently, both "boot config" and "boot system"
 # are defined and are part of the "running-config"
@@ -823,6 +857,8 @@ if __name__ == '__main__':
                         action="store_true", help="Get the version (serial, SSH)")
     parser.add_argument('--disable-checkheaps', dest='delay_checkheaps', default=False, action="store_true", 
                         help='Disable checkheaps default timeout (60 sec)')
+    parser.add_argument('--show-checkheaps', dest='show_checkheaps', default=False, action="store_true", 
+                        help='Show checkheaps status')
     parser.add_argument('--upload', dest='upload', default=False, action="store_true", help='Upload over SSH')
     parser.add_argument('--force', dest='force', action="store_true", help='Overwrite existing files')
     parser.add_argument('--download', dest='download', default=False, action="store_true",
@@ -890,6 +926,11 @@ if __name__ == '__main__':
 
     if args.delay_checkheaps == True:
         delay_checkheaps(comm)
+        comm.close()
+        sys.exit()
+        
+    if args.show_checkheaps == True:
+        show_checkheaps(comm)
         comm.close()
         sys.exit()
 

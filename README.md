@@ -66,7 +66,16 @@ generate gdbinit files using those symbols. By default `asadbg.py` will use a
 file `template_gdbinit` to automate building a version-specific gdbinit file at
 runtime using whatever symbols are present in the database. 
 
-## Debugging a GNS3 device
+## Quickly boot a real device (no debugging)
+
+You can quickly boot a given version by specifying the firmware and configuration
+files which must already be on the CF card.
+
+```
+asadbg.py --firmware asa802-k8.bin --config config-802
+```
+
+## Debugging a GNS3 device with config file
 
 The following example shows how you can setup the configuration files to debug
 a GNS3 device. First we define an `asadbg.cfg` configuration file similar to
@@ -131,7 +140,7 @@ asadbg$ ./asadbg.py --name asav941200 --asadbg-config asadbg.cfg
 Continuing.
 ```
 
-## Debugging a real device
+## Debugging a real device with config file
 
 The following example shows how you can setup the configuration files to debug
 a real Cisco ASA device over a serial console.
