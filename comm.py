@@ -451,7 +451,7 @@ def boot_router_cli_non_rooted(ser, boot_firmware, boot_config=None):
         if "Cannot find %s" % boot_firmware in data or \
             "unable to boot an image" in data:
             print("")
-            logmsg("Firmware does not exist. Exiting now")
+            logmsg("Firmware is corrupt or does not exist. Exiting now")
             sys.exit()
 
     # give some time because it doesn't continue right away
