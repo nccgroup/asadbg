@@ -227,10 +227,13 @@ if __name__ == '__main__':
     dirs = [os.path.join(scriptdir, "asadbg.cfg"), os.path.join(userdir, "asadbg.cfg")]
     try:
         dirs.insert(0, os.environ["ASADBG_CONFIG"])
+        logmsg("Will load config from ASADBG_CONFIG environment variable: %s" % os.environ["ASADBG_CONFIG"])
     except:
+        logmsg("ASADBG_CONFIG unset")
         pass
     if args.asadbg_config:
         dirs.insert(0, args.asadbg_config)
+        logmsg("Will load config file from --asadbg-config: %s" % args.asadbg_config)
     for confpath in dirs:
         if os.path.exists(confpath):
             logmsg("Using config file: %s" % confpath)
@@ -246,6 +249,7 @@ if __name__ == '__main__':
                 s = cp.get("GLOBAL", "scripts")
                 scripts.extend(s.split(","))
             if name == None:
+                logmsg("WARNING: Couldn't find specified config entry: %s" % name)
                 break
             if not cp.has_section(name):
                 logmsg("Could not find section: '%s' in config" % name)
@@ -277,6 +281,8 @@ if __name__ == '__main__':
                 s = cp.get(name, "scripts")
                 scripts.extend(s.split(","))
             break
+        else:
+            logmsg("WARN: Couldn't find config file %s" % confpath)
 
     # scripts from config file are loaded before those from command line
     if args.scripts:
@@ -334,14 +340,16 @@ if __name__ == '__main__':
             sys.exit()
         logmsg("Going to debug...")
     else:
-        logmsg("Going to just load firmware/config...")
+        logmsg("Not attaching gdb. Going to just load firmware/config...")
 
     if arch == "gns3":
         if not attach_gdb:
             logmsg("Error: In GNS3, we only support attaching to a listening gdbserver")
+            logmsg("Error: Use --attach-gdb or set attach_gdb=yes in your asadbg.cfg file")
             sys.exit()
         if not gns3_host or not gns3_port:
             logmsg("Error: You need to define a valid host/port for debugging GNS3")
+            logmsg("Error: --gns3-host and --gns3-port or gns3_host= and gns3_port= in your asadbg.cfg file")
             sys.exit()
         else:
             logmsg("Using GNS3 emulator %s:%s" % (gns3_host, gns3_port))
