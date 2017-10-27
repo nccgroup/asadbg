@@ -379,7 +379,7 @@ def logoff_webvpn_sessions(comm, show=False):
 def compute_md5(comm, filename, show=False):
     execute_cmd(comm, "verify /md5 %s\n" % filename, show=False, config_t=True, read=False)
     comm.flush()
-    logmsg("Calculating MD5. Will take 20 seconds... ", end='', flush=True)
+    logmsg("Calculating MD5. Will take 20 seconds... ")
     buf = comm.read(wait=20)
     if "(No such file or directory)" in buf:
         logmsg("File %s not found. Skipping it" % filename)
@@ -990,10 +990,30 @@ if __name__ == '__main__':
                 compute_md5(comm, f)
                 # It looks like because of read_channel() we have to close the previous connection
                 # so we need to open a new one...
+                try:
+                    comm.close()
+                    comm = Comm()
+                    comm.init_ssh(args.target_ip, user, password)
+                except:
+                    # Sometimes paramiko fails and spits out a ton of errors
+                    # even if it worked otherwise:
+                    # ```
+                    # Exception ignored in: <object repr() failed>
+                    # Traceback (most recent call last):
+                    #   File "/usr/local/lib/python3.5/dist-packages/paramiko/file.py", line 61, in __del__
+                    #   File "/usr/local/lib/python3.5/dist-packages/paramiko/file.py", line 79, in close
+                    #   File "/usr/local/lib/python3.5/dist-packages/paramiko/file.py", line 88, in flush
+                    # TypeError: 'NoneType' object is not callable
+                    # ```
+                    # XXX - This is an attempt to avoid printing traceback to avoid
+                    # confusion, but untested since I haven't hit it again yet
+                    logmsg("Ignored paramiko error")
+                    pass
+            try:
                 comm.close()
-                comm = Comm()
-                comm.init_ssh(args.target_ip, user, password)
-            comm.close()
+            except:
+                logmsg("Ignored paramiko error")
+                pass
             sys.exit()
 
         if args.ctrlc == True:
@@ -1001,7 +1021,6 @@ if __name__ == '__main__':
             password = ""
             gdb_ctrl_c_main(comm, args.target_ip, user, password)
             sys.exit()
-            
 
     if args.cfg_file != None:
         with open(args.cfg_file, "r") as tmp:
