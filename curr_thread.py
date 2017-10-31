@@ -9,7 +9,7 @@
 try:
     import gdb
 except ImportError:
-    print("Not running inside of GDB, exiting...")
+    print("[curr_thread] Not running inside of GDB, exiting...")
     exit()
 
 import sys

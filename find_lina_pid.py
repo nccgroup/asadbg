@@ -10,7 +10,7 @@
 try:
     import gdb
 except ImportError:
-    print("Not running inside of GDB, exiting...")
+    print("[find_lina_pid] Not running inside of GDB, exiting...")
     exit()
 
 import sys

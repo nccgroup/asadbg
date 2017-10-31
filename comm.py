@@ -645,7 +645,7 @@ def boot_router_cli(ser, boot_firmware, enable_gdb=False, boot_config=None):
 
 def execute_cmd_over_serial(cmd, ser, confirm_list=[], config_t=False):
     data_out = ''
-    logmsg("Executing command: '%s'" % cmd)
+    logmsg("Executing command: '%s' over serial: '%s'" % (cmd, ser.port))
     # flush previous prompt
     serial_read(ser, 4096)
     # this may fail if we are already in enable mode but we don't really care

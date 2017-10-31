@@ -43,8 +43,7 @@ def get_target(asadb_file, version, arch):
                 return t
             elif arch == "32" and t["arch"] == 32:
                 return t
-            else:
-                return t
+            continue
     return None
 
 def start_shell(port, doLog=False):
@@ -55,19 +54,21 @@ def start_shell(port, doLog=False):
         os.system("screen %s" % port)
 
 # XXX - The warning is redundant for build_gdbinit
-def is_debugging_path_ok(version, rootfs_path, asadb_file, arch):
-    logmsg("Using architecture: %s" % arch)
+def is_debugging_path_ok(version, rootfs_path, asadb_file, arch, verbose=False):
     target = get_target(asadb_file, version, arch)
     if not target:
         logmsg("Warning: Version not supported yet in db file")
+    if verbose:
+        logmsg("Using target:")
+        pprint.pprint(target)
     linafile = os.path.join(rootfs_path, 'asa/bin/lina')
     logmsg("Trying lina: %s" % linafile)
 
     return os.path.isfile(linafile)
 
-def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial_port, version, gdbinitfile=None, arch=None, scripts=None, use_retsync=False, cont=False, find_lina=False, use_display=False, debug=False):
+def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial_port, version, gdbinitfile=None, arch=None, scripts=None, use_retsync=False, cont=False, find_lina=False, use_display=False, verbose=False):
     target = get_target(targetdb, version, arch=arch)
-    if debug:
+    if verbose:
         logmsg("Using target:")
         pprint.pprint(target)
     if not target:
@@ -157,6 +158,23 @@ def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial
 
     return gdbinitfile
 
+def show_resulting_options(version, arch, rootfs_path, firmware_type,
+                               attach_gdb, firmware, config, gns3_host,
+                               gns3_port, serial_port, asadb_file):
+    logmsg("-"*20)
+    logmsg("version: %s" % version)
+    logmsg("arch: %s" % arch)
+    logmsg("rootfs_path: %s" % rootfs_path)
+    logmsg("firmware_type: %s" % firmware_type)
+    logmsg("attach_gdb: %s" % attach_gdb)
+    logmsg("firmware: %s" % firmware)
+    logmsg("config: %s" % config)
+    logmsg("gns3_host: %s" % gns3_host)
+    logmsg("gns3_port: %s" % gns3_port)
+    logmsg("serial_port: %s" % serial_port)
+    logmsg("asadb_file: %s" % asadb_file)
+    logmsg("-"*20)
+    
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -199,6 +217,8 @@ if __name__ == '__main__':
                         help='Enable logging for screen in case of no gdb attached')
     parser.add_argument('--asadbg-config', dest='asadbg_config', default=None,
                         help='Alternative path for an asadbg.cfg')
+    parser.add_argument('--verbose', dest='verbose', default=False, action="store_true",
+                        help='Display more debugging messages if problems with this script :)')
     args = parser.parse_args()
     
     name = args.name
@@ -311,6 +331,11 @@ if __name__ == '__main__':
         serial_port = args.serial_port
     if args.asadb_file != None:
         asadb_file = args.asadb_file
+    
+    if args.verbose:
+        show_resulting_options(version, arch, rootfs_path, firmware_type,
+                               attach_gdb, firmware, config, gns3_host,
+                               gns3_port, serial_port, asadb_file)
 
     if attach_gdb:
         try:
@@ -335,21 +360,22 @@ if __name__ == '__main__':
             logmsg("Error: Maybe specify extracted path with --rootfs-path")
             sys.exit()
 
-        if not is_debugging_path_ok(version, rootfs_path, asadb_file, arch):
+        if not is_debugging_path_ok(version, rootfs_path, asadb_file, arch, 
+                                    verbose=args.verbose):
             logmsg("Error: You must extract the firmware to the configured path to debug it")
             sys.exit()
         logmsg("Going to debug...")
     else:
         logmsg("Not attaching gdb. Going to just load firmware/config...")
-
+        
     if arch == "gns3":
         if not attach_gdb:
             logmsg("Error: In GNS3, we only support attaching to a listening gdbserver")
-            logmsg("Error: Use --attach-gdb or set attach_gdb=yes in your asadbg.cfg file")
+            logmsg("       Use --attach-gdb or set attach_gdb=yes in your asadbg.cfg file")
             sys.exit()
         if not gns3_host or not gns3_port:
             logmsg("Error: You need to define a valid host/port for debugging GNS3")
-            logmsg("Error: --gns3-host and --gns3-port or gns3_host= and gns3_port= in your asadbg.cfg file")
+            logmsg("       Use --gns3-host and --gns3-port or gns3_host= and gns3_port= in your asadbg.cfg file")
             sys.exit()
         else:
             logmsg("Using GNS3 emulator %s:%s" % (gns3_host, gns3_port))
@@ -365,8 +391,8 @@ if __name__ == '__main__':
                 sys.exit()
 
         if attach_gdb and firmware_type != "rooted" and firmware_type != "gdb":
-            logmsg("ERROR: You need a gdb-enabled or rooted firmware to debug REAL ASA")
-            logmsg('ERROR: Specify "rooted" or "gdb" with firmware_type if this is the case')
+            logmsg("Error: You need a gdb-enabled or rooted firmware to debug REAL ASA")
+            logmsg('       Specify "rooted" or "gdb" with firmware_type if this is the case')
             sys.exit()
         # We need to enable GDB at boot for rooted firmware only
         enable_gdb = False
@@ -402,7 +428,8 @@ if __name__ == '__main__':
                                     version=version, arch=arch,
                                     scripts=scripts, use_retsync=ret_sync,
                                     cont=continue_exec,
-                                    find_lina=find_lina, use_display=display)
+                                    find_lina=find_lina, use_display=display,
+                                    verbose=args.verbose)
         os.system("%s -x %s --quiet" % (GDB, gdbinitfile))
     else:
         start_shell(serial_port, doLog=dolog)
