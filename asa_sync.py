@@ -133,7 +133,7 @@ if __name__ == "__main__":
         "mappings": mappings
     }
 
-    sync = rs.Sync(HOST, ctx=ctx)
+    sync = rs.Sync(HOST, PORT, ctx=ctx)
     ##### end of Cisco ASA specific
 
     rs.Syncoff(sync)
