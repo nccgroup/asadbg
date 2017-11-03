@@ -5,7 +5,7 @@
 # Copyright (c) 2017, Cedric Halbronn <cedric.halbronn(at)nccgroup(dot)trust>
 #
 # IDA Python script used to save addresses in /asa/bin/lina into an external
-# database to be used by asadbg.
+# database to be used by asadbg. Also for /asa/bin/lina_monitor.
 #
 # Assume you previously used asadbg_rename.py.
 
@@ -35,7 +35,16 @@ def logmsg(s, debug=True):
 # merge = if you want to merge results in existing ones
 #         such as adding symbols to existing elements
 # replace = useful if we want to remove old names before adding real symbols
-def hunt(symbols, dbname, merge=True, replace=False):
+def hunt(symbols, dbname, merge=True, replace=False, executable_name="lina"):
+    if executable_name == "lina":
+        base_name = "lina_imagebase"
+        addr_name = "addresses"
+    elif executable_name == "lina_monitor":
+        base_name = "lm_imagebase"
+        addr_name = "lm_addresses"
+    else:
+        logmsg("ERROR: bad elf name in hunt()")
+        return None
     
     # parse version/fw from directory name
     idbdir = GetIdbDir()
@@ -52,8 +61,8 @@ def hunt(symbols, dbname, merge=True, replace=False):
     new_target["fw"] = fw
     new_target["arch"] = ARCHITECTURE
     # by default we don't know the imagebase so we will save
-    # absolute addresses in new_target["addresses"]
-    new_target["lina_imagebase"] = 0
+    # absolute addresses in new_target[addr_name]
+    new_target[base_name] = 0
     # XXX - add fw md5 to db?
 
     prevtime = time.time()
@@ -65,9 +74,7 @@ def hunt(symbols, dbname, merge=True, replace=False):
         # load old targets
         targets = []
         if os.path.isfile(dbname):
-            with open(dbname, "rb") as tmp:
-                logmsg("Reading from %s" % dbname)
-                targets = json.loads(tmp.read())
+            targets = load_targets(dbname)
         else:
             logmsg("Creating new db: %s" % dbname)
         #logmsg("Existing targets:")
@@ -94,7 +101,7 @@ def hunt(symbols, dbname, merge=True, replace=False):
             #logmsg("%s = 0x%x (%s)" % (name, addr, type(addr)))
             addresses[name] = addr
         #logmsg(addresses)
-        new_target['addresses'] = addresses
+        new_target[addr_name] = addresses
 
         if is_new(targets, new_target):
             logmsg("New target: %s (%s)" % (version, fw))
@@ -102,9 +109,12 @@ def hunt(symbols, dbname, merge=True, replace=False):
             targets.append(new_target)
         elif merge == True:
             logmsg("Merging target: %s (%s)" % (version, fw))
-            i = merge_target(new_target, targets)
-            print(json.dumps(targets[i], indent=2))
-#            print(targets[i])
+            i = merge_target(new_target, targets, executable_name=executable_name)
+            if i != None:
+                print(json.dumps(targets[i], indent=2))
+#               print(targets[i])
+            else:
+                logmsg("Skipping target in pickle: %s (%s) as merge_target() failed" % (version, fw))
         elif replace == True:
             logmsg("Replacing target: %s (%s)" % (version, fw))
             replace_target(new_target, targets)
@@ -118,15 +128,8 @@ def hunt(symbols, dbname, merge=True, replace=False):
         logmsg("Writing to %s" % dbname)
         open(dbname, "wb").write(json.dumps(targets, indent=4))
         
-if __name__ == '__main__':
 
-    try:
-        # e.g. /path/to/asadbg/asadb.json
-        dbname = os.environ["ASADBG_DB"]
-    except:
-        logmsg("You need to define ASADBG_DB first")
-        sys.exit()
-
+def main_lina(dbname):
     symbols = {
         "clock_interval":LocByName, 
         "mempool_array":LocByName, 
@@ -145,7 +148,38 @@ if __name__ == '__main__':
         logmsg("Invalid architecture")
         sys.exit()
 
-    hunt(symbols, dbname)
+    hunt(symbols, dbname, executable_name="lina")
+
+def main_lina_monitor(dbname):
+    symbols = {
+        "jz_after_code_sign_verify_signature_image":LocByName,
+    }
+    if ARCHITECTURE == 32:
+        logmsg("WARNING: not supported/tested yet")
+    elif ARCHITECTURE == 64:
+        pass
+    else:
+        logmsg("Invalid architecture")
+        sys.exit()
+
+    hunt(symbols, dbname, executable_name="lina_monitor")
+
+if __name__ == '__main__':
+    try:
+        # e.g. /path/to/asadbg/asadb.json
+        dbname = os.environ["ASADBG_DB"]
+    except:
+        logmsg("You need to define ASADBG_DB first")
+        sys.exit()
+
+    if get_idb_name() == "lina":
+        logmsg("Hunting lina...")
+        main_lina(dbname)
+    elif get_idb_name() == "lina_monitor":
+        logmsg("Hunting lina_monitor...")
+        main_lina_monitor(dbname)
+    else:
+        logmsg("ERROR: Unsupported filename")
 
     # This allows us to cleanly exit IDA upon completion
     if "DO_EXIT" in os.environ:

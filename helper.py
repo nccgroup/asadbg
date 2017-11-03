@@ -10,7 +10,7 @@
 import os
 import re
 import sys
-import json
+import json, time
 import pickle
 import traceback
 
@@ -141,42 +141,57 @@ def replace_target(new_target, targets):
         targets[i] = new_target
         break
 
-def merge_target(new_target, targets):
+def merge_target(new_target, targets, executable_name="lina"):
+    log = logger()
+    if executable_name == "lina":
+        base_name = "lina_imagebase"
+        addr_name = "addresses"
+    elif executable_name == "lina_monitor":
+        base_name = "lm_imagebase"
+        addr_name = "lm_addresses"
+    else:
+        log.logmsg("ERROR: bad elf name in merge_target()")
+        return None
     for i in range(len(targets)):
         t = targets[i]
         if t["version"] != new_target["version"] or t["fw"] != new_target["fw"]:
             continue
         # found previous target, let's merge it
-        for name, addr in new_target["addresses"].items():
-            if "addresses" not in t.keys():
-                t["addresses"] = {}
+        for name, addr in new_target[addr_name].items():
+            if addr_name not in t.keys():
+                t[addr_name] = {}
+            if base_name not in t.keys():
+                t[base_name] = 0
             # these keys come from info.py import
-            if "lina_imagebase" in t.keys() and "ASLR" in t.keys():
+            if base_name in t.keys() and "ASLR" in t.keys():
                     # special case for offset, not an address
                 if name.startswith("OFFSET_") or name.startswith("REG_"):
-                    t["addresses"][name] = addr
+                    t[addr_name][name] = addr
 
                 elif t["ASLR"] == True:
-                    # we assume ASLR lina_imagebase has been set correctly to either 0
+                    # we assume imagebase has been set correctly to either 0
                     # or the value it has when ASLR is disabled for this fw
                     # as what asafw does :)
-                    t["addresses"][name] = addr
+                    t[addr_name][name] = addr
                 else:
-                    t["addresses"][name] = addr - t["lina_imagebase"]
+                    t[addr_name][name] = addr - t[base_name]
             else:
-                t["addresses"][name] = addr
+                t[addr_name][name] = addr
         targets[i] = t
         break
     return i
 
 def load_targets(targetdb):
-    log = logger()
+    # XXX log.logmsg() does not work 
+    # as it prints <helper.logger instance at 0x06B77EB8>
+    # so we use print() instead :|
+    print("[helper] Reading from %s" % targetdb)
     if targetdb.endswith(".pickle"):
         usePickle = True
     elif targetdb.endswith(".json"):
         usePickle = False
     else:
-        log.logmsg("Can't decide if pickle to use based on extension")
+        print("[helper] Can't decide if pickle to use based on extension")
         sys.exit()
     if os.path.isfile(targetdb):
         if usePickle:
@@ -191,9 +206,24 @@ def load_targets(targetdb):
                 # hax so we can use it if it fails to open the db
                 targets = pickle.load(open(targetdb, "r"))
         else:
-            with open(targetdb, "r") as tmp:
-                targets = json.loads(tmp.read())  
+            # even when using filelock, it looks like sometimes we read bad JSON
+            # so we try several times :|
+            max_attempts = 5
+            attempts = 0
+            while attempts < max_attempts:
+                try:
+                    with open(targetdb, "rb") as tmp:
+                        targets = json.loads(tmp.read())
+                except ValueError:
+                    print("[helper] Failed to read valid JSON, trying again in 1 sec")
+                    time.sleep(1)
+                    attempts += 1
+                else:
+                    break
+            if attempts == max_attempts:
+                print('[helper] [!] failed to read %s' % targetdb)
+                sys.exit() 
     else:
-        log.logmsg('[!] %s file not found' % targetdb)
+        print('[helper] [!] %s file not found' % targetdb)
         sys.exit() 
     return targets 

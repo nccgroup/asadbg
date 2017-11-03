@@ -5,8 +5,10 @@
 # Copyright (c) 2017, Cedric Halbronn <cedric.halbronn(at)nccgroup(dot)trust>
 #
 # IDA Python script used to rename stuff in /asa/bin/lina to be used by asadbg:
-# clock_interval, lina_wind_timer, mempool_array, socks_proxy_server_start, 
+# clock_interval, lina_wind_timer, mempool_array, socks_proxy_server_start,
 # aaa_admin_authenticate, mempool_list_
+# Also used to get symbols in /asa/bin/lina_monitor to patch it so it can boot a
+# modified /asa/bin/lina on GNS3.
 
 import os
 import string
@@ -26,6 +28,10 @@ def logmsg(s, debug=True):
         print("[asadbg_rename] " + s)
     else:
         print(s)
+
+##################################################
+###################### lina ######################
+##################################################
 
 ################## rename using logging functions ##################
 
@@ -267,10 +273,10 @@ def get_mempool_list_():
     if funcaddr == None:
         logmsg("can't find malloc_show_top_usage. Should not happen")
         return False
-     
+
     count = 0
     for e in FuncItems(funcaddr):
-        # asa-smp 64-bit and asa 32-bit 
+        # asa-smp 64-bit and asa 32-bit
         if GetOpType(e, 0) == o_reg and GetOpType(e, 1) == o_imm and \
             GetOperandValue(e, 1) >= seg_info[".data"]["startEA"] and \
             GetOperandValue(e, 1) <= seg_info[".data"]["endEA"]:
@@ -303,8 +309,8 @@ def get_mempool_list_():
             logmsg("cound not find mempool_list__ptr/mempool_list_ after 20 instructions")
             break
         count += 1
-                
-        
+
+
 
 ################## debug shell ##################
 
@@ -329,9 +335,7 @@ def rename_socks_proxy_server_start():
 def rename_aaa_admin_authenticate():
     return rename_function_by_aString_being_used("aSYouDoNotHaveA", "aaa_admin_authenticate")
 
-################## main ##################
-
-def main():
+def main_lina():
     # logging
     res = rename_ikev2_log_exit_path()
     if not res:
@@ -353,8 +357,75 @@ def main():
     rename_socks_proxy_server_start()
     rename_aaa_admin_authenticate()
 
+##################################################
+################## lina_monitor ##################
+##################################################
+
+# .rodata:0000000000019D00 aCode_sign_veri db 'code_sign_verify_signature_image',0
+# ...
+# .text:0000000000005690 sub_5690        proc near
+# ...
+#.text:00000000000057E6                 lea     rsi, aCode_sign_veri ; "code_sign_verify_signature_image"
+#.text:00000000000057ED                 lea     rdi, aS_NotAnElfImag ; "%s. Not an ELF image"
+# => sub_5690 == code_sign_verify_signature_image
+def find_lina_signature_check():
+    res = rename_function_by_aString_being_used(
+                "aCode_sign_veri",
+                "code_sign_verify_signature_image",
+                xref_func=MyFirstXrefTo)
+    if not res:
+        logmsg("Failed to find code_sign_verify_signature_image()")
+        return
+
+    # Now check we find a "jz" a few instructions after
+    # "call code_sign_verify_signature_image"
+    addr = MyLocByName("code_sign_verify_signature_image")
+    if not addr:
+        logmsg("Could not find code_sign_verify_signature_image")
+        return False
+    # There is usually one xref only anyway
+    addr = MyFirstXrefTo(addr)
+    if not addr:
+        logmsg("Could not find 'call code_sign_verify_signature_image'")
+        return False
+    # it is usually the third instruction after the call:
+    # .text:000000000000395B E8 30 1D 00+   call    code_sign_verify_signature_image
+    # .text:0000000000003960 85 C0          test    eax, eax
+    # .text:0000000000003962 89 C3          mov     ebx, eax
+    # .text:0000000000003964 74 50          jz      short loc_39B6
+    count = 0
+    e = addr
+    bFound = False
+    while count <= 4:
+        e = NextHead(e)
+        disass = GetDisasm(e).split()
+        if disass[0] == "jz":   
+            MyMakeName(e, "jz_after_code_sign_verify_signature_image")
+            print "jz_after_code_sign_verify_signature_image = 0x%x" % e
+            bFound = True
+            break
+        count += 1
+    
+    if not bFound:
+        return False
+    return True
+
+def main_lina_monitor():
+    find_lina_signature_check()
+
+##################################################
+###################### main ######################
+##################################################
+
 if __name__ == '__main__':
-    main()
+    if get_idb_name() == "lina":
+        logmsg("Analyzing lina...")
+        main_lina()
+    elif get_idb_name() == "lina_monitor":
+        logmsg("Analyzing lina_monitor...")
+        main_lina_monitor()
+    else:
+        logmsg("ERROR: Unsupported filename")
 
     # Note that this script is called automatically from the command line
     # Consequently, we cannot call sys.exit(), otherwise the temporary files
