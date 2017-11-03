@@ -22,6 +22,9 @@ from helper import *
 # ida_helper.py in IDA makes it impossible to modify it and then reload the
 # calling script from IDA without closing IDA and restarting it (due to some
 # caching problem or Python namespaces that I don't understand yet :|)
+ida_helper_path = os.path.abspath(os.path.join(sys.path[-1], "..", "idahunt"))
+sys.path.insert(0, ida_helper_path)
+
 from ida_helper import *
 
 def logmsg(s, debug=True):
@@ -45,7 +48,7 @@ def hunt(symbols, dbname, merge=True, replace=False, executable_name="lina"):
     else:
         logmsg("ERROR: bad elf name in hunt()")
         return None
-    
+
     # parse version/fw from directory name
     idbdir = GetIdbDir()
     version = build_version(idbdir)
@@ -127,7 +130,7 @@ def hunt(symbols, dbname, merge=True, replace=False, executable_name="lina"):
 
         logmsg("Writing to %s" % dbname)
         open(dbname, "wb").write(json.dumps(targets, indent=4))
-        
+
 
 def main_lina(dbname):
     symbols = {

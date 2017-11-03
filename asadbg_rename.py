@@ -19,6 +19,9 @@ import re
 # ida_helper.py in IDA makes it impossible to modify it and then reload the
 # calling script from IDA without closing IDA and restarting it (due to some
 # caching problem or Python namespaces that I don't understand yet :|)
+ida_helper_path = os.path.abspath(os.path.join(sys.path[-1], "..", "idahunt"))
+sys.path.insert(0, ida_helper_path)
+
 from ida_helper import *
 
 def logmsg(s, debug=True):
@@ -374,6 +377,12 @@ def find_lina_signature_check():
                 "code_sign_verify_signature_image",
                 xref_func=MyFirstXrefTo)
     if not res:
+        res = rename_function_by_aString_being_used(
+                "aCodeSignVerify",
+                "code_sign_verify_signature_image",
+                xref_func=MyFirstXrefTo)
+
+    if not res:
         logmsg("Failed to find code_sign_verify_signature_image()")
         return
 
@@ -383,32 +392,33 @@ def find_lina_signature_check():
     if not addr:
         logmsg("Could not find code_sign_verify_signature_image")
         return False
-    # There is usually one xref only anyway
-    addr = MyFirstXrefTo(addr)
-    if not addr:
-        logmsg("Could not find 'call code_sign_verify_signature_image'")
-        return False
-    # it is usually the third instruction after the call:
-    # .text:000000000000395B E8 30 1D 00+   call    code_sign_verify_signature_image
-    # .text:0000000000003960 85 C0          test    eax, eax
-    # .text:0000000000003962 89 C3          mov     ebx, eax
-    # .text:0000000000003964 74 50          jz      short loc_39B6
-    count = 0
-    e = addr
-    bFound = False
-    while count <= 4:
-        e = NextHead(e)
-        disass = GetDisasm(e).split()
-        if disass[0] == "jz":   
-            MyMakeName(e, "jz_after_code_sign_verify_signature_image")
-            print "jz_after_code_sign_verify_signature_image = 0x%x" % e
-            bFound = True
-            break
-        count += 1
-    
+
+    for xref in get_xrefs(addr):
+        addr = xref
+        # it is usually the third instruction after the call:
+        # .text:000000000000395B E8 30 1D 00+   call    code_sign_verify_signature_image
+        # .text:0000000000003960 85 C0          test    eax, eax
+        # .text:0000000000003962 89 C3          mov     ebx, eax
+        # .text:0000000000003964 74 50          jz      short loc_39B6
+        count = 0
+        e = addr
+        bFound = False
+        # XXX - instead of counting to 4, we could just find the basic block  
+        # and test the instruction at block.endEA?
+        while count <= 4:
+            e = NextHead(e)
+            print(GetDisasm(e))
+            if GetDisasm(e).startswith("jz"):
+                MyMakeName(e, "jz_after_code_sign_verify_signature_image")
+                logmsg("jz_after_code_sign_verify_signature_image = 0x%x" % e)
+                bFound = True
+                break
+            count += 1
+
     if not bFound:
-        return False
-    return True
+        logmsg("Failed to find jz instruction for jz_after_code_sign_verify_signature_image ")
+
+    return bFound
 
 def main_lina_monitor():
     find_lina_signature_check()
