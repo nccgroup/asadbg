@@ -53,7 +53,7 @@ def hunt(symbols, dbname, merge=True, replace=False):
     new_target["arch"] = ARCHITECTURE
     # by default we don't know the imagebase so we will save
     # absolute addresses in new_target["addresses"]
-    new_target["imagebase"] = 0
+    new_target["lina_imagebase"] = 0
     # XXX - add fw md5 to db?
 
     prevtime = time.time()
@@ -103,7 +103,8 @@ def hunt(symbols, dbname, merge=True, replace=False):
         elif merge == True:
             logmsg("Merging target: %s (%s)" % (version, fw))
             i = merge_target(new_target, targets)
-            print(targets[i])
+            print(json.dumps(targets[i], indent=2))
+#            print(targets[i])
         elif replace == True:
             logmsg("Replacing target: %s (%s)" % (version, fw))
             replace_target(new_target, targets)

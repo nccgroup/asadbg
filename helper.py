@@ -151,18 +151,18 @@ def merge_target(new_target, targets):
             if "addresses" not in t.keys():
                 t["addresses"] = {}
             # these keys come from info.py import
-            if "imagebase" in t.keys() and "ASLR" in t.keys():
+            if "lina_imagebase" in t.keys() and "ASLR" in t.keys():
                     # special case for offset, not an address
                 if name.startswith("OFFSET_") or name.startswith("REG_"):
                     t["addresses"][name] = addr
 
                 elif t["ASLR"] == True:
-                    # we assume ASLR imagebase has been set correctly to either 0
+                    # we assume ASLR lina_imagebase has been set correctly to either 0
                     # or the value it has when ASLR is disabled for this fw
                     # as what asafw does :)
                     t["addresses"][name] = addr
                 else:
-                    t["addresses"][name] = addr - t["imagebase"]
+                    t["addresses"][name] = addr - t["lina_imagebase"]
             else:
                 t["addresses"][name] = addr
         targets[i] = t

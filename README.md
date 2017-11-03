@@ -109,7 +109,7 @@ we want to attach gdb.
         "aaa_admin_authenticate": 418288
     }, 
     "fw": "asav941-200.qcow2", 
-    "imagebase": 4194304,
+    "lina_imagebase": 4194304,
     "version": "9.4.1.200",
     "arch": 64
 }

@@ -149,7 +149,7 @@ def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial
 
     if target:
         gdbinit = gdbinit.replace('%WATCHDOG_TIMEOUT_ADDR%', \
-                                      "0x%08x" % (target['imagebase'] + target['addresses']['clock_interval']))
+                                      "0x%08x" % (target['lina_imagebase'] + target['addresses']['clock_interval']))
     else:
         gdbinit = gdbinit.replace('set *%WATCHDOG_TIMEOUT_ADDR%', "#set *%WATCHDOG_TIMEOUT_ADDR%")
         gdbinit = gdbinit.replace("Watchdog disabled", "Watchdog not disabled due to missing asadb file")

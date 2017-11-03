@@ -16,7 +16,7 @@
         "NX": false, 
         "uname": "Linux version 2.6.29.6 (builders@releng02) (gcc version 4.3.4 (crosstool-NG-1.5.0) ) #1 PREEMPT Tue Jul 14 21:53:19 PDT 2015", 
         "version": "9.2.4", 
-        "imagebase": 134512640, 
+        "lina_imagebase": 134512640, 
         "heap_alloc": "dlmalloc 2.8.3", 
         "arch": 32, 
         "exported_symbols": false
@@ -38,7 +38,7 @@
         "NX": false, 
         "uname": "Linux version 2.6.29.6 (builders@releng02) (gcc version 4.3.4 (crosstool-NG-1.5.0) ) #1 SMP Tue Jul 14 22:22:33 PDT 2015", 
         "version": "9.2.4", 
-        "imagebase": 4194304, 
+        "lina_imagebase": 4194304, 
         "heap_alloc": "dlmalloc 2.8.3", 
         "arch": 64, 
         "exported_symbols": false
@@ -59,13 +59,13 @@
         "NX": false, 
         "uname": "Linux version 3.10.55-ltsi-WR6.0.0.13_standard (builders@releng25) (gcc version 4.8.1 (Wind River Linux Sourcery CodeBench 4.8-39) ) #1 SMP Mon May 11 16:05:42 PDT 2015", 
         "version": "9.4.1.200", 
-        "imagebase": 4194304, 
+        "lina_imagebase": 4194304, 
         "heap_alloc": "ptmalloc 2.x", 
         "arch": 64, 
         "exported_symbols": false
     }, 
     {
-        "imagebase": 0, 
+        "lina_imagebase": 0, 
         "version": "9.6.1", 
         "arch": 64, 
         "addresses": {
@@ -91,14 +91,14 @@
         "NX": true, 
         "uname": "Linux version 3.10.62-ltsi-WR6.0.0.27_standard (builders@releng28) (gcc version 4.8.1 (Wind River Linux Sourcery CodeBench 4.8-47) ) #1 SMP Mon Dec 5 11:38:37 PST 2016", 
         "version": "9.6.2.7", 
-        "imagebase": 93824992231424, 
+        "lina_imagebase": 93824992231424, 
         "heap_alloc": "ptmalloc 2.x", 
         "arch": 64, 
         "exported_symbols": true
     },
     {
         "RELRO": false,
-        "imagebase": 93824992231424,
+        "lina_imagebase": 93824992231424,
         "addresses": {
             "clock_interval": 79485440, 
             "socks_proxy_server_start": 36952512, 

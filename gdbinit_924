@@ -1,0 +1,78 @@
+# This file is part of asadbg.
+# Copyright (c) 2017, Aaron Adams <aaron.adams(at)nccgroup(dot)trust>
+# Copyright (c) 2017, Cedric Halbronn <cedric.halbronn(at)nccgroup(dot)trust>
+#
+# Main gdbinit script to get a valid environment in gdb
+# Usage: can't be used as standalone. Needs to be loaded/patched by asadbg.py
+#
+# gdb needs to be started with right privileges to debug the serial
+
+source ignore_errors.py
+
+# setup file and paths
+printf "[gdbinit_924] Configuring paths...\n"
+file /home/aa/cisco/firmware/asa924/_asa924-k8.bin.extracted/rootfs/asa/bin/lina
+set solib-absolute-prefix /home/aa/cisco/firmware/asa924/_asa924-k8.bin.extracted/rootfs/
+
+set disassembly-flavor intel
+# disable the "Type <return> to continue, or q <return> to quit" pagination prompt in GDB
+printf "[gdbinit_924] Disabling pagination...\n"
+set height 0
+set pagination off
+
+if 0 == 1
+    printf "[gdbinit_924] Connecting over TCP/IP...\n"
+    # uncomment this if you want to see why a connection to TCP/IP fails
+    #set debug remote 1
+    target remote 127.0.0.1:8000
+    printf "[gdbinit_924] Connected.\n"
+end
+if 1 == 1
+    printf "[gdbinit_924] Connecting over USB...\n"
+    target extended-remote /dev/ttyUSB0
+    printf "[gdbinit_924] Connected.\n"
+end
+
+#set follow-fork-mode child
+
+if 0 == 1
+    source find_lina_pid.py
+end
+
+# *clock_interval = 0 (version specific)
+set *0x0a53f168 = 0
+printf "[gdbinit_924] Watchdog disabled\n"
+
+source asa_libmempool.py
+if 1 == 1
+    source asa_libdlmalloc.py
+    dlcallback register mpcallback libmempool/libmempool
+end
+if 0 == 1
+    source asa_libptmalloc.py
+    ptcallback register mpcallback libmempool/libmempool
+    # some dlmalloc structures used even on 64-bit
+    source asa_libdlmalloc.py
+    dlcallback register mpcallback libmempool/libmempool
+end
+printf "[gdbinit_924] heap debugging plugins loaded\n"
+
+source ../debug/libcisco/ikev2.py
+source ../debug/libcisco/ikev1.py
+source ../debug/dps.py
+printf "[gdbinit_924] Additional gdb scripts loaded\n"
+
+if 0 == 1
+    printf "[gdbinit_924] Syncing...\n"
+    source asa_sync.py
+    ignore-errors sync
+end
+if 0 == 1
+    display /5i $pc
+end
+if 1 == 1
+    printf "[gdbinit_924] Continuing...\n"
+    continue
+end
+
+printf "[gdbinit_924] Done.\n"

@@ -84,7 +84,7 @@ class dlsymbols(gdb.Command):
             return
 
         try:
-            mempool_array_addr = self.target["imagebase"] + self.target["addresses"]["mempool_array"]
+            mempool_array_addr = self.target["lina_imagebase"] + self.target["addresses"]["mempool_array"]
         except KeyError:
             self.log.logmsg("mempool_array_addr failed to initalize, consider adding mempool_array for %s" % self.bin_name)
         else:
