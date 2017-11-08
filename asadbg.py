@@ -14,8 +14,18 @@
 # - You can use this script before unplugging/replugging a real ASA power socket
 #   as it will just read the serial line until it detects the boot sequence.
 
-import serial, sys, time, binascii, os, argparse
-import platform, pprint, json, getpass, inspect, configparser
+import serial
+import sys
+import time
+import binascii
+import os
+import argparse
+import platform
+import pprint
+import json
+import getpass
+import inspect
+import configparser
 
 # Our own libraries
 import comm
@@ -174,10 +184,12 @@ def show_resulting_options(version, arch, rootfs_path, firmware_type,
     logmsg("serial_port: %s" % serial_port)
     logmsg("asadb_file: %s" % asadb_file)
     logmsg("-"*20)
-    
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
+    # XXX - Would be nice to change the name to be more explicit that it is the
+    # actual asadbg config entry name 
     parser.add_argument('--name', dest='name', default=None, 
                         help='Name for an entry in a asadbg.cfg config file')
     parser.add_argument('--version', dest='version', default=None,
@@ -192,6 +204,8 @@ if __name__ == '__main__':
                         help='Attach to gdbserver at startup')
     parser.add_argument('--firmware', dest='firmware', default=None,
                         help='Firmware filename to boot (REAL ASA only and MUST already be on the flash)')
+    # XXX - Would be nice to change this to --fw-config or --firmware-config to
+    # avoid confusion with the asadbg-config
     parser.add_argument('--config', dest='config', default=None,
                         help='Config filename to use (REAL ASA only and MUST already be on the flash)')
     parser.add_argument('--gns3-host', dest='gns3_host', default=None, 
@@ -220,7 +234,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', dest='verbose', default=False, action="store_true",
                         help='Display more debugging messages if problems with this script :)')
     args = parser.parse_args()
-    
+
     name = args.name
     version = None
     arch = None
@@ -251,58 +265,66 @@ if __name__ == '__main__':
     except:
         logmsg("ASADBG_CONFIG unset")
         pass
+
     if args.asadbg_config:
+        if not os.path.exists(args.asadbg_config):
+            logmsg("ERROR: Couldn't find specified config entry: %s" % name)
+            sys.exit(1)
         dirs.insert(0, args.asadbg_config)
         logmsg("Will load config file from --asadbg-config: %s" % args.asadbg_config)
-    for confpath in dirs:
-        if os.path.exists(confpath):
-            logmsg("Using config file: %s" % confpath)
-            cp = configparser.SafeConfigParser()
-            cp.read(confpath)
-            if cp.has_option("GLOBAL", "gns3_host"):
-                gns3_host = cp.get("GLOBAL", "gns3_host")
-            if cp.has_option("GLOBAL", "serial_port"):
-                serial_port = cp.get("GLOBAL", "serial_port")
-            if cp.has_option("GLOBAL", "asadb_file"):
-                asadb_file = cp.get("GLOBAL", "asadb_file")
-            if cp.has_option("GLOBAL", "scripts"):
-                s = cp.get("GLOBAL", "scripts")
-                scripts.extend(s.split(","))
-            if name == None:
-                logmsg("WARNING: Couldn't find specified config entry: %s" % name)
+
+    # Don't look for a name if one wasn't asked for
+    if name != None:
+        found = False
+        for confpath in dirs:
+            if os.path.exists(confpath):
+                logmsg("Using config file: %s" % confpath)
+                cp = configparser.SafeConfigParser()
+                cp.read(confpath)
+                if not cp.has_section(name):
+                    continue
+                found = True
+                if cp.has_option("GLOBAL", "gns3_host"):
+                    gns3_host = cp.get("GLOBAL", "gns3_host")
+                if cp.has_option("GLOBAL", "serial_port"):
+                    serial_port = cp.get("GLOBAL", "serial_port")
+                if cp.has_option("GLOBAL", "asadb_file"):
+                    asadb_file = cp.get("GLOBAL", "asadb_file")
+                if cp.has_option("GLOBAL", "scripts"):
+                    s = cp.get("GLOBAL", "scripts")
+                    scripts.extend(s.split(","))
+                logmsg("Found section: '%s' in config" % name)
+                if cp.has_option(name, "gns3_host"):
+                    gns3_host = cp.get(name, "gns3_host")
+                if cp.has_option(name, "serial_port"):
+                    serial_port = cp.get(name, "serial_port")
+                if cp.has_option(name, "asadb_file"):
+                    asadb_file = cp.get(name, "asadb_file")
+                if cp.has_option(name, "version"):
+                    version = cp.get(name, "version")
+                if cp.has_option(name, "arch"):
+                    arch = cp.get(name, "arch")
+                if cp.has_option(name, "rootfs_path"):
+                    rootfs_path = cp.get(name, "rootfs_path")
+                if cp.has_option(name, "firmware_type"):
+                    firmware_type = cp.get(name, "firmware_type")
+                if cp.has_option(name, "attach_gdb"):
+                    attach_gdb = cp.getboolean(name, "attach_gdb")
+                if cp.has_option(name, "firmware"):
+                    firmware = cp.get(name, "firmware")
+                if cp.has_option(name, "config"):
+                    config = cp.get(name, "config")
+                if cp.has_option(name, "gns3_port"):
+                    gns3_port = cp.get(name, "gns3_port")
+                if cp.has_option(name, "scripts"):
+                    s = cp.get(name, "scripts")
+                    scripts.extend(s.split(","))
                 break
-            if not cp.has_section(name):
-                logmsg("Could not find section: '%s' in config" % name)
-                break
-            logmsg("Found section: '%s' in config" % name)
-            if cp.has_option(name, "gns3_host"):
-                gns3_host = cp.get(name, "gns3_host")
-            if cp.has_option(name, "serial_port"):
-                serial_port = cp.get(name, "serial_port")
-            if cp.has_option(name, "asadb_file"):
-                asadb_file = cp.get(name, "asadb_file")
-            if cp.has_option(name, "version"):
-                version = cp.get(name, "version")
-            if cp.has_option(name, "arch"):
-                arch = cp.get(name, "arch")
-            if cp.has_option(name, "rootfs_path"):
-                rootfs_path = cp.get(name, "rootfs_path")
-            if cp.has_option(name, "firmware_type"):
-                firmware_type = cp.get(name, "firmware_type")
-            if cp.has_option(name, "attach_gdb"):
-                attach_gdb = cp.getboolean(name, "attach_gdb")
-            if cp.has_option(name, "firmware"):
-                firmware = cp.get(name, "firmware")
-            if cp.has_option(name, "config"):
-                config = cp.get(name, "config")
-            if cp.has_option(name, "gns3_port"):
-                gns3_port = cp.get(name, "gns3_port")
-            if cp.has_option(name, "scripts"):
-                s = cp.get(name, "scripts")
-                scripts.extend(s.split(","))
-            break
-        else:
-            logmsg("WARN: Couldn't find config file %s" % confpath)
+            else:
+                logmsg("WARN: Couldn't find config file %s" % confpath)
+        if not found:
+            logmsg("ERROR: Couldn't find config entry %s in any config files")
+            sys.exit(1)
 
     # scripts from config file are loaded before those from command line
     if args.scripts:
@@ -331,11 +353,17 @@ if __name__ == '__main__':
         serial_port = args.serial_port
     if args.asadb_file != None:
         asadb_file = args.asadb_file
-    
+
     if args.verbose:
         show_resulting_options(version, arch, rootfs_path, firmware_type,
                                attach_gdb, firmware, config, gns3_host,
                                gns3_port, serial_port, asadb_file)
+
+    if args.firmware == None and args.name == None:
+        logmsg("WARNING: You failed to specify a firmware file (--firmware) or a asadbg config section (--name)")
+        logmsg("WARNING: This means you will be booting the default image on the ASA device")
+        logmsg("WARNING: Sleeping for 5 seconds before beginning")
+        time.sleep(5)
 
     if attach_gdb:
         try:
