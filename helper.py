@@ -141,14 +141,17 @@ def replace_target(new_target, targets):
         targets[i] = new_target
         break
 
-def merge_target(new_target, targets, executable_name="lina"):
+def merge_target(new_target, targets, bin_name="lina"):
     log = logger()
-    if executable_name == "lina":
+    if bin_name == "lina":
         base_name = "lina_imagebase"
         addr_name = "addresses"
-    elif executable_name == "lina_monitor":
+    elif bin_name == "lina_monitor":
         base_name = "lm_imagebase"
         addr_name = "lm_addresses"
+    elif bin_name == "libc.so":
+        base_name = "libc_imagebase"
+        addr_name = "libc_addresses"
     else:
         log.logmsg("ERROR: bad elf name in merge_target()")
         return None

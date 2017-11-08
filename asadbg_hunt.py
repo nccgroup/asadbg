@@ -10,22 +10,29 @@
 # Assume you previously used asadbg_rename.py.
 
 import argparse
+import filelock
 import json
+import os
 import re
 import sys
-import os
+import time
 
-import filelock
-from helper import *
-    
+# ida
+import idc
+import idautils
+
+# asadbg imports
+import helper
+#from helper import *
 # Note that the current way of importing an external script such as
 # ida_helper.py in IDA makes it impossible to modify it and then reload the
 # calling script from IDA without closing IDA and restarting it (due to some
 # caching problem or Python namespaces that I don't understand yet :|)
 ida_helper_path = os.path.abspath(os.path.join(sys.path[-1], "..", "idahunt"))
 sys.path.insert(0, ida_helper_path)
+import ida_helper
 
-from ida_helper import *
+#from ida_helper import *
 
 def logmsg(s, debug=True):
     if not debug:
@@ -38,31 +45,34 @@ def logmsg(s, debug=True):
 # merge = if you want to merge results in existing ones
 #         such as adding symbols to existing elements
 # replace = useful if we want to remove old names before adding real symbols
-def hunt(symbols, dbname, merge=True, replace=False, executable_name="lina"):
-    if executable_name == "lina":
+def hunt(symbols, dbname, merge=True, replace=False, bin_name="lina"):
+    if bin_name == "lina":
         base_name = "lina_imagebase"
         addr_name = "addresses"
-    elif executable_name == "lina_monitor":
+    elif bin_name == "lina_monitor":
         base_name = "lm_imagebase"
         addr_name = "lm_addresses"
+    elif bin_name == "libc.so":
+        base_name = "libc_imagebase"
+        addr_name = "libc_addresses"
     else:
         logmsg("ERROR: bad elf name in hunt()")
         return None
 
     # parse version/fw from directory name
-    idbdir = GetIdbDir()
-    version = build_version(idbdir)
+    idbdir = idautils.GetIdbDir()
+    version = helper.build_version(idbdir)
     if not version:
         logmsg("Can't parse version in %s" % idbdir)
         sys.exit()
-    fw = build_bin_name(idbdir)
+    fw = helper.build_bin_name(idbdir)
     if not fw:
         logmsg("Can't parse fw in %s" % idbdir)
         sys.exit()
 
     new_target = {}
     new_target["fw"] = fw
-    new_target["arch"] = ARCHITECTURE
+    new_target["arch"] = ida_helper.ARCHITECTURE
     # by default we don't know the imagebase so we will save
     # absolute addresses in new_target[addr_name]
     new_target[base_name] = 0
@@ -77,7 +87,7 @@ def hunt(symbols, dbname, merge=True, replace=False, executable_name="lina"):
         # load old targets
         targets = []
         if os.path.isfile(dbname):
-            targets = load_targets(dbname)
+            targets = helper.load_targets(dbname)
         else:
             logmsg("Creating new db: %s" % dbname)
         #logmsg("Existing targets:")
@@ -106,24 +116,24 @@ def hunt(symbols, dbname, merge=True, replace=False, executable_name="lina"):
         #logmsg(addresses)
         new_target[addr_name] = addresses
 
-        if is_new(targets, new_target):
+        if helper.is_new(targets, new_target):
             logmsg("New target: %s (%s)" % (version, fw))
             logmsg(addresses)
             targets.append(new_target)
         elif merge == True:
             logmsg("Merging target: %s (%s)" % (version, fw))
-            i = merge_target(new_target, targets, executable_name=executable_name)
+            i = helper.merge_target(new_target, targets, bin_name=bin_name)
             if i != None:
                 print(json.dumps(targets[i], indent=2))
 #               print(targets[i])
             else:
-                logmsg("Skipping target in pickle: %s (%s) as merge_target() failed" % (version, fw))
+                logmsg("Skipping target: %s (%s) as helper.merge_target() failed" % (version, fw))
         elif replace == True:
             logmsg("Replacing target: %s (%s)" % (version, fw))
-            replace_target(new_target, targets)
+            helper.replace_target(new_target, targets)
             logmsg(new_target)
         else:
-            logmsg("Skipping target in pickle: %s (%s)" % (version, fw))
+            logmsg("Skipping target: %s (%s)" % (version, fw))
         # sort targets by version. Drawback: index changes each time we add
         # a new firmware but it should not anymore once we have them all
         targets = sorted(targets, key=lambda k: map(int, k["version"].split(".")))
@@ -134,40 +144,54 @@ def hunt(symbols, dbname, merge=True, replace=False, executable_name="lina"):
 
 def main_lina(dbname):
     symbols = {
-        "clock_interval":LocByName, 
-        "mempool_array":LocByName, 
-        "mempool_list_":LocByName, 
-        "socks_proxy_server_start":LocByName,
-        "aaa_admin_authenticate":LocByName,
-        "mempool_list_":LocByName,
+        "clock_interval":idc.LocByName, 
+        "mempool_array":idc.LocByName, 
+        "mempool_list_":idc.LocByName, 
+        "socks_proxy_server_start":idc.LocByName,
+        "aaa_admin_authenticate":idc.LocByName,
+        "mempool_list_":idc.LocByName,
     }
     symbols32 = {}
     symbols64 = {}
-    if ARCHITECTURE == 32:
+    if ida_helper.ARCHITECTURE == 32:
         symbols.update(symbols32)
-    elif ARCHITECTURE == 64:
+    elif ida_helper.ARCHITECTURE == 64:
         symbols.update(symbols64)
     else:
         logmsg("Invalid architecture")
         sys.exit()
 
-    hunt(symbols, dbname, executable_name="lina")
+    hunt(symbols, dbname, bin_name="lina")
 
 def main_lina_monitor(dbname):
     symbols = {
-        "jz_after_code_sign_verify_signature_image":LocByName,
+        "jz_after_code_sign_verify_signature_image":idc.LocByName,
     }
-    if ARCHITECTURE == 32:
+    if ida_helper.ARCHITECTURE == 32:
         logmsg("WARNING: not supported/tested yet")
-    elif ARCHITECTURE == 64:
+    elif ida_helper.ARCHITECTURE == 64:
         pass
     else:
         logmsg("Invalid architecture")
         sys.exit()
 
-    hunt(symbols, dbname, executable_name="lina_monitor")
+    hunt(symbols, dbname, bin_name="lina_monitor")
 
-if __name__ == '__main__':
+def main_libc(dbname):
+    symbols = {
+        "free":ida_helper.MyLocByName,
+    }
+    if ida_helper.ARCHITECTURE == 32:
+        logmsg("WARNING: not supported/tested yet")
+    elif ida_helper.ARCHITECTURE == 64:
+        pass
+    else:
+        logmsg("Invalid architecture")
+        sys.exit()
+
+    hunt(symbols, dbname, bin_name="libc.so")
+
+def main():
     try:
         # e.g. /path/to/asadbg/asadb.json
         dbname = os.environ["ASADBG_DB"]
@@ -175,15 +199,22 @@ if __name__ == '__main__':
         logmsg("You need to define ASADBG_DB first")
         sys.exit()
 
-    if get_idb_name() == "lina":
+    if ida_helper.get_idb_name() == "lina":
         logmsg("Hunting lina...")
         main_lina(dbname)
-    elif get_idb_name() == "lina_monitor":
+    elif ida_helper.get_idb_name() == "lina_monitor":
         logmsg("Hunting lina_monitor...")
         main_lina_monitor(dbname)
+    elif ida_helper.get_idb_name() == "libc.so":
+        logmsg("Hunting libc...")
+        main_libc(dbname)
     else:
         logmsg("ERROR: Unsupported filename")
 
     # This allows us to cleanly exit IDA upon completion
     if "DO_EXIT" in os.environ:
-        Exit(1)
+        # XXX - Was Exit(1)
+        idc.qexit(1)
+
+if __name__ == '__main__':
+    main()

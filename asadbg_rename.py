@@ -10,10 +10,10 @@
 # Also used to get symbols in /asa/bin/lina_monitor to patch it so it can boot a
 # modified /asa/bin/lina on GNS3.
 
-import os
-import string
 import binascii
+import os
 import re
+import string
 
 # Note that the current way of importing an external script such as
 # ida_helper.py in IDA makes it impossible to modify it and then reload the
@@ -22,6 +22,7 @@ import re
 ida_helper_path = os.path.abspath(os.path.join(sys.path[-1], "..", "idahunt"))
 sys.path.insert(0, ida_helper_path)
 
+import ida_helper
 from ida_helper import *
 
 def logmsg(s, debug=True):
@@ -424,16 +425,27 @@ def main_lina_monitor():
     find_lina_signature_check()
 
 ##################################################
+###################### libc ######################
+##################################################
+
+def main_libc():
+    # We currently only rely on __libc_free, which is exported
+    pass
+
+##################################################
 ###################### main ######################
 ##################################################
 
 if __name__ == '__main__':
-    if get_idb_name() == "lina":
+    if ida_helper.get_idb_name() == "lina":
         logmsg("Analyzing lina...")
         main_lina()
-    elif get_idb_name() == "lina_monitor":
+    elif ida_helper.get_idb_name() == "lina_monitor":
         logmsg("Analyzing lina_monitor...")
         main_lina_monitor()
+    elif ida_helper.get_idb_name() == "libc.so":
+        logmsg("Analyzing libc...")
+        main_libc()
     else:
         logmsg("ERROR: Unsupported filename")
 
