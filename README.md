@@ -433,7 +433,7 @@ It is sometimes useful to check the MD5 of files on the flash to make sure
 the files have been correctly uploaded.
 
 ```
-$ comm.py --md5 --input asa924-k8.bin asa924-5-k8.bin --comm ssh
+$ comm.py --md5 --input asa924-k8.bin asa924-5-k8.bin --comm ssh --oldssh --ip 192.168.210.77
 Calculating MD5. Will take 20 seconds... asa924-k8.bin = 4558b27d0dd7ba1751e43b0ba33593a3
 Calculating MD5. Will take 20 seconds... asa924-5-k8.bin = 74765d62abb2c4a5e677ed9ca49ebf87
 ```
