@@ -709,7 +709,11 @@ def reboot_over_serial(ser):
         serial_write(ser, "reboot -f\n")
 
 def enable_checkheaps_over_serial(ser):
-    result = execute_cmd_over_serial("checkheaps check-interval 1", ser)
+    result = execute_cmd_over_serial("checkheaps check-interval 1", ser, config_t=True)
+
+def disable_crashdumps_over_serial(ser):
+    result = execute_cmd_over_serial("crashinfo console disable", ser, config_t=True)
+    result = execute_cmd_over_serial("crashinfo save disable", ser, config_t=True)
     
 # We assume the ASA has been booted with the config file and with the ASA version that we want to 
 # use for the next boot (and all following ones). Consequently, both "boot config" and "boot system"

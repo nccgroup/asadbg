@@ -107,6 +107,7 @@ def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial
     else:
         gdbinit = gdbinit.replace('%FINDLINAPID%', "0")
 
+    # XXX ARCH32/ARCH64 could be removed if we don't have differences anymore?
     if target:
         # XXX - Redundant in light of us passing arch anyway? 
         if target["arch"] == 32:
@@ -115,9 +116,6 @@ def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial
         elif target["arch"] == 64:
             gdbinit = gdbinit.replace('%ARCH32%', "0")
             gdbinit = gdbinit.replace('%ARCH64%', "1")
-        else:
-            logmsg("Error: Invalid architecture, should not happen")
-            sys.exit()
     else:
         if arch == "32":
             gdbinit = gdbinit.replace('%ARCH32%', "1")
@@ -126,6 +124,15 @@ def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial
             gdbinit = gdbinit.replace('%ARCH32%', "0")
             gdbinit = gdbinit.replace('%ARCH64%', "1")
 
+    if target:
+        if "ptmalloc" in target["heap_alloc"]:
+            gdbinit = gdbinit.replace('%PTMALLOC%', "1")
+        else:
+            gdbinit = gdbinit.replace('%PTMALLOC%', "0")
+    else:
+        logmsg("Warning: Assuming no ptmalloc due to no target file")
+        gdbinit = gdbinit.replace('%PTMALLOC%', "0")
+        
     if arch == "gns3":
         gdbinit = gdbinit.replace('%TCPIP%', "1")
         gdbinit = gdbinit.replace('%SERIAL%', "0")

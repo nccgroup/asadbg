@@ -44,17 +44,13 @@ set *%WATCHDOG_TIMEOUT_ADDR% = 0
 printf "[gdbinit_%VERSION%] Watchdog disabled\n"
 
 source asa_libmempool.py
-if %ARCH32% == 1
-    source asa_libdlmalloc.py
-    dlcallback register mpcallback libmempool/libmempool
-end
-if %ARCH64% == 1
+if %PTMALLOC% == 1
     source asa_libptmalloc.py
     ptcallback register mpcallback libmempool/libmempool
-    # some dlmalloc structures used even on 64-bit
-    source asa_libdlmalloc.py
-    dlcallback register mpcallback libmempool/libmempool
 end
+# 32-bit is dlmalloc-based but some dlmalloc structures used even on 64-bit
+source asa_libdlmalloc.py
+dlcallback register mpcallback libmempool/libmempool
 printf "[gdbinit_%VERSION%] heap debugging plugins loaded\n"
 
 %SCRIPTS%

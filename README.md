@@ -1,5 +1,9 @@
 # asadbg
 
+Preliminary note: we recommend you to use this as part of 
+[asatools](https://github.com/nccgroup/asatools) but it can also be used 
+standalone.
+
 **asadbg** is a framework of tools to aid in automating live debugging of Cisco
 ASA devices, as well as automating interaction with the Cisco CLI over
 serial/ssh to quickly perform repetitive tasks.
