@@ -8,6 +8,8 @@ standalone.
 ASA devices, as well as automating interaction with the Cisco CLI over
 serial/ssh to quickly perform repetitive tasks.
 
+![asadbg demo](demo_asadbg.gif)
+
 * It wraps gdb
 * It supports an `asadbg.cfg` configuration file to enable debugging different 
   versions easily
