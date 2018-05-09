@@ -45,15 +45,20 @@ def logmsg(s, debug=True):
 # ikev2_log_exit_path = my_log
 # on recent 64-bit firmware with symbols, it is already defined
 def rename_ikev2_log_exit_path():
+    return rename_logging_function(log_funcname="ikev2_log_exit_path", funcstr_helpers=["aIkev2_parse_id"])
+
+def rename_unicorn_log_impl():
+    return rename_logging_function(log_funcname="unicorn_log_impl", funcstr_helpers=["aRemove_ns"])
+
+# funcstr_helpers: Looks like 1 symbol is sufficient for now
+def rename_logging_function(log_funcname, funcstr_helpers):
     global ERROR_MINUS_1
-    tmp = LocByName("ikev2_log_exit_path")
+    tmp = LocByName(log_funcname)
     if tmp != ERROR_MINUS_1:
-        logmsg("rename_ikev2_log_exit_path: 'ikev2_log_exit_path' already defined")
+        logmsg("rename_logging_function: '%s' already defined" % log_funcname)
         return True
 
-    # Looks like 1 symbol is sufficient for now
-    funcstr_helpers = ["aIkev2_parse_id"]
-    ikev2_log_exit_path = None
+    log_funcaddr = None
     for s in funcstr_helpers:
         addrstr = LocByName(s)
         if addrstr == ERROR_MINUS_1:
@@ -62,28 +67,30 @@ def rename_ikev2_log_exit_path():
         for e in get_xrefs(addrstr):
             e = NextHead(e)
             count = 0
-            # we only supports 10 instructions forwards looking for the "call ikev2_log_exit_path"
+            # we only supports 10 instructions forwards looking for the "call <log_funcaddr>"
             # but it should be enough because the funcstr_helpers strings are passed
             # as arguments to the call
             while count <= 10:
                 if GetDisasm(e).startswith("call"):
-                    ikev2_log_exit_path = GetOperandValue(e, 0)
+                    log_funcaddr = GetOperandValue(e, 0)
                     break
                 e = NextHead(e)
                 count += 1
-            if ikev2_log_exit_path != None:
+            if log_funcaddr != None:
                 break
 
-    if ikev2_log_exit_path == None:
-        logmsg("ikev2_log_exit_path not found")
+    if log_funcaddr == None:
+        logmsg("%s not found" % log_funcname)
         return False
-    logmsg("Found ikev2_log_exit_path = 0x%x" % ikev2_log_exit_path)
+    logmsg("Found %s = 0x%x" % (log_funcname, log_funcaddr))
 
-    if not MakeName(ikev2_log_exit_path, "ikev2_log_exit_path"):
-        logmsg("Should not happen: failed to rename to ikev2_log_exit_path")
+    if not MakeName(log_funcaddr, log_funcname):
+        logmsg("Should not happen: failed to rename to %s" % log_funcname)
         return False
     return True
 
+# Note: description is incomplete below as now it works for ikev2_log_exit_path, unicorn_log_impl, etc.
+#
 # It rename functions using the ikev2_log_exit_path function and arguments passed to this function.
 # Eg: for asa924-k8.bin:
 #
@@ -109,7 +116,7 @@ def rename_ikev2_log_exit_path():
 #
 # By looking at the 3rd argument to the ikev2_log_exit_path function we get the name of the calling function
 # => 0876F430 = ikev2_add_ike_policy_by_addr
-def rename_using_ikev2_log_exit_path(e = ScreenEA()):
+def rename_using_logging_function(e=ScreenEA(), log_funcname="ikev2_log_exit_path", logfunc_arg_number=2):
     # are we a call instruction?
     mnem = GetMnem(e)
     if mnem != "call" and mnem != "jmp":
@@ -122,7 +129,7 @@ def rename_using_ikev2_log_exit_path(e = ScreenEA()):
         logmsg("0x%x: get_call_arguments failed" % e)
         return False
     if len(args) < 3:
-        logmsg("0x%x: Missing argument for my_log" % e)
+        logmsg("0x%x: Missing argument for %s" % (e, log_funcname))
         return False
 
     # Is the 3rd argument an offset to a string as it should be?
@@ -130,11 +137,14 @@ def rename_using_ikev2_log_exit_path(e = ScreenEA()):
     seg_info = get_segments_info()
     #logmsg(args)
     #logmsg("0x%x" % e)
-    if not addr_is_in_one_segment(args[2], seg_info):
-        logmsg("0x%x not a valid offset" % args[2])
+    if logfunc_arg_number not in args.keys():
+        logmsg("Could not find argument %d in %s args" % (logfunc_arg_number, log_funcname))
+        return False
+    if not addr_is_in_one_segment(args[logfunc_arg_number], seg_info):
+        logmsg("0x%x not a valid offset" % args[logfunc_arg_number])
         return False
 
-    funcname = GetString(args[2])
+    funcname = GetString(args[logfunc_arg_number])
     func = idaapi.get_func(e)
     if not func:
         logmsg("Skipping: Could not find function for %x" % e)
@@ -143,11 +153,21 @@ def rename_using_ikev2_log_exit_path(e = ScreenEA()):
     if Name(current_func_addr).startswith("sub_"):
         #logmsg("0x%x -> %s" % (current_func_addr, funcname))
         rename_function(current_func_addr, funcname)
+    else:
+        pass
+        #logmsg("Already named: 0x%x -> %s" % (current_func_addr, funcname))
 
     return True
 
 #e.g.: my_log_addr = 0x087AADC0 # lina in asa924-k8.bin
 def rename_functions_using_ikev2_log_exit_path():
+    return rename_functions_using_logging_function(log_funcname="ikev2_log_exit_path", logfunc_arg_number=2)
+    
+# By looking at the 2nd argument of the call to unicorn_log_impl(), we get the name of the calling function   
+def rename_functions_using_unicorn_log_impl():
+    return rename_functions_using_logging_function(log_funcname="unicorn_log_impl", logfunc_arg_number=1)
+
+def rename_functions_using_logging_function(log_funcname, logfunc_arg_number):
     global ERROR_MINUS_1
     # search for one symbol that is found using this method
     # and assume it is already done if symbol already exists
@@ -156,15 +176,19 @@ def rename_functions_using_ikev2_log_exit_path():
     #    logmsg("rename_functions_using_ikev2_log_exit_path: 'ikev2_child_sa_create' already defined")
     #    return True
 
-    my_log_addr = LocByName("ikev2_log_exit_path")
+    count = 0
+    my_log_addr = LocByName(log_funcname)
     if my_log_addr == ERROR_MINUS_1:
-        logmsg("ERROR: you need to find ikev2_log_exit_path first. Use rename_ikev2_log_exit_path() first or find it manually by using strings that look like function names such as 'ikev2_parse_packet', 'ikev2_get_sa_and_neg', etc.")
+        logmsg("ERROR: you need to find %s first. Use rename_using_logging_function() first or find it manually by using strings that look like function names such as 'ikev2_parse_packet', 'ikev2_get_sa_and_neg', etc. for IKEv2 or other for WebVPN, etc." % log_funcname)
         return False
     for e in get_xrefs(my_log_addr):
         #logmsg("0x%x" % e)
         # we don't check for return values because we better rename as many functions as possible
         # even if one failed e.g. because code was defined by not as a function.
-        rename_using_ikev2_log_exit_path(e)
+        if rename_using_logging_function(e, log_funcname=log_funcname, logfunc_arg_number=logfunc_arg_number):
+            count += 1
+
+    logmsg("Renamed %d functions" % count)
     return True
 
 ################## timer ##################
@@ -349,6 +373,12 @@ def main_lina():
     res = rename_functions_using_ikev2_log_exit_path()
     if not res:
         logmsg("rename_functions_using_ikev2_log_exit_path() failed")
+    res = rename_unicorn_log_impl()
+    if not res:
+        logmsg("rename_unicorn_log_impl() failed")
+    res = rename_functions_using_unicorn_log_impl()
+    if not res:
+        logmsg("rename_functions_using_unicorn_log_impl() failed")
 
     # timer
     rename_timer_func_and_timeout()
