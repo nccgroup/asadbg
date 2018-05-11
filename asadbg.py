@@ -177,7 +177,7 @@ def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial
 
 def show_resulting_options(version, arch, rootfs_path, firmware_type,
                                attach_gdb, firmware, config, gns3_host,
-                               gns3_port, serial_port, asadb_file):
+                               gns3_port, serial_port, asadb_file, scripts):
     logmsg("-"*20)
     logmsg("version: %s" % version)
     logmsg("arch: %s" % arch)
@@ -190,6 +190,7 @@ def show_resulting_options(version, arch, rootfs_path, firmware_type,
     logmsg("gns3_port: %s" % gns3_port)
     logmsg("serial_port: %s" % serial_port)
     logmsg("asadb_file: %s" % asadb_file)
+    logmsg("scripts: %s" % str(scripts))
     logmsg("-"*20)
 
 if __name__ == '__main__':
@@ -364,7 +365,7 @@ if __name__ == '__main__':
     if args.verbose:
         show_resulting_options(version, arch, rootfs_path, firmware_type,
                                attach_gdb, firmware, config, gns3_host,
-                               gns3_port, serial_port, asadb_file)
+                               gns3_port, serial_port, asadb_file, scripts)
 
     if args.firmware == None and args.name == None:
         logmsg("WARNING: You failed to specify a firmware file (--firmware) or a asadbg config section (--name)")

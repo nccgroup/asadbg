@@ -78,7 +78,7 @@ You can quickly boot a given version by specifying the firmware and configuratio
 files which must already be on the CF card.
 
 ```
-asadbg.py --firmware asa802-k8.bin --config config-802
+asadbg$ ./asadbg.py --firmware-type normal --serial-port /dev/ttyUSB0 --firmware asa802-k8.bin --config config-802
 ```
 
 ## Debugging a GNS3 device with config file
