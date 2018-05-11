@@ -163,7 +163,17 @@ def rename_using_logging_function(e=ScreenEA(), log_funcname="ikev2_log_exit_pat
 def rename_functions_using_ikev2_log_exit_path():
     return rename_functions_using_logging_function(log_funcname="ikev2_log_exit_path", logfunc_arg_number=2)
     
-# By looking at the 2nd argument of the call to unicorn_log_impl(), we get the name of the calling function   
+# By looking at the 2nd argument of the call to unicorn_log_impl(), we get the name of the calling function
+#
+# XXX - add support for older firmware such as asa802-k8.bin
+# as a temporary register is used and we don't support it
+# .text:08AA7EDC                 mov     eax, offset aRemove_ns ; "remove_ns"
+# .text:08AA7EE1                 mov     [esp+24h], ebx
+# .text:08AA7EE5                 mov     [esp+20h], esi
+# .text:08AA7EE9                 mov     [esp+1Ch], edx
+# .text:08AA7EED                 mov     [esp+4], eax
+# .text:08AA7EF1                 mov     dword ptr [esp], offset aRamfs_c ; "ramfs.c"
+# .text:08AA7EF8                 call    unicorn_log_impl
 def rename_functions_using_unicorn_log_impl():
     return rename_functions_using_logging_function(log_funcname="unicorn_log_impl", logfunc_arg_number=1)
 
