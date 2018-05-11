@@ -48,7 +48,7 @@ def rename_ikev2_log_exit_path():
     return rename_logging_function(log_funcname="ikev2_log_exit_path", funcstr_helpers=["aIkev2_parse_id"])
 
 def rename_unicorn_log_impl():
-    return rename_logging_function(log_funcname="unicorn_log_impl", funcstr_helpers=["aRemove_ns"])
+    return rename_logging_function(log_funcname="unicorn_log_impl", funcstr_helpers=["aRemove_ns", "aRemoveNs"])
 
 # funcstr_helpers: Looks like 1 symbol is sufficient for now
 def rename_logging_function(log_funcname, funcstr_helpers):
@@ -124,7 +124,7 @@ def rename_using_logging_function(e=ScreenEA(), log_funcname="ikev2_log_exit_pat
         return False
 
     # parse arguments, parsing instructions backwards
-    args = get_call_arguments(e)
+    args = get_call_arguments(e, count_max=35)
     if not args:
         logmsg("0x%x: get_call_arguments failed" % e)
         return False
