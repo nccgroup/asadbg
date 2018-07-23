@@ -331,7 +331,7 @@ if __name__ == '__main__':
             else:
                 logmsg("WARN: Couldn't find config file %s" % confpath)
         if not found:
-            logmsg("ERROR: Couldn't find config entry %s in any config files")
+            logmsg("ERROR: Couldn't find config entry %s in any config files" % name)
             sys.exit(1)
 
     # scripts from config file are loaded before those from command line
