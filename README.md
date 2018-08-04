@@ -1,7 +1,7 @@
 # asadbg
 
-Preliminary note: we recommend you to use this as part of 
-[asatools](https://github.com/nccgroup/asatools) but it can also be used 
+Preliminary note: we recommend you to use this as part of
+[asatools](https://github.com/nccgroup/asatools) but it can also be used
 standalone.
 
 **asadbg** is a framework of tools to aid in automating live debugging of Cisco
@@ -11,17 +11,17 @@ serial/ssh to quickly perform repetitive tasks.
 ![asadbg demo](demo_asadbg.gif)
 
 * It wraps gdb
-* It supports an `asadbg.cfg` configuration file to enable debugging different 
+* It supports an `asadbg.cfg` configuration file to enable debugging different
   versions easily
 * It supports both real hardware and GNS3
 * Optionally it uses ret-sync to allow a better debugging experience from IDA Pro
 * It supports executing additional gdb scripts at boot
 * It provides libraries that can be useful for automating tests across multiple firmware
   versions on real hardware
-  
-The main tool is `asadbg.py` and it will execute most of the other helper 
-scripts. Note that you may need to initially use 
-[asafw](https://github.com/nccgroup/asafw) to unpack firmware to get the best 
+
+The main tool is `asadbg.py` and it will execute most of the other helper
+scripts. Note that you may need to initially use
+[asafw](https://github.com/nccgroup/asafw) to unpack firmware to get the best
 flavour of `asadbg`.
 
 * `asadbg.py`: main tool used to debug ASAs
@@ -30,11 +30,11 @@ flavour of `asadbg`.
 The following are automatically imported by `asadbg.py` but we give you some
 information on what they are for:
 
-* `asa_lib*.py`: gdb Python scripts to use 
-  [libdlmalloc](https://github.com/nccgroup/libdlmalloc), 
+* `asa_lib*.py`: gdb Python scripts to use
+  [libdlmalloc](https://github.com/nccgroup/libdlmalloc),
   [libptmalloc](https://github.com/nccgroup/libptmalloc) and
   [libmempool](https://github.com/nccgroup/libmempool).
-* `asa_sync.py`: gdb Python script to use 
+* `asa_sync.py`: gdb Python script to use
   [ret-sync](https://github.com/bootleg/ret-sync/)
 * `comm.py`: set of functions to communicate over serial, SSH, telnet.
 * `find_lina_pid.py`: find the lina PID using SSH commands
@@ -50,8 +50,8 @@ information on what they are for:
 
 You initially need to modify `asadbg/env.sh` to match your environment. It will
 allow you to define paths to the tools used by all the scripts as well as some
-variables matching your ASA environment. Note there is a simmilar 
-`asafw/env.sh` but only one is required to be used for both projects. We 
+variables matching your ASA environment. Note there is a simmilar
+`asafw/env.sh` but only one is required to be used for both projects. We
 recommend that you add it to your `~/.bashrc`:
 
 ```
@@ -70,7 +70,7 @@ the device. For each firmware that you want to debug, you can use something
 like the `asafw` tool to mine different symbols and then you can automatically
 generate gdbinit files using those symbols. By default `asadbg.py` will use a
 file `template_gdbinit` to automate building a version-specific gdbinit file at
-runtime using whatever symbols are present in the database. 
+runtime using whatever symbols are present in the database.
 
 ## Quickly boot a real device (no debugging)
 
@@ -101,20 +101,20 @@ gns3_port=12005
 attach_gdb=yes
 ```
 
-It also points to the ASA database `asadb.json` file containing the addresses required. What 
+It also points to the ASA database `asadb.json` file containing the addresses required. What
 is important here is that the `version=941200` and `arch=gns3` specified in
 `asadbg.cfg` allow to match the firmware in `asadb.json` below. Also we indicate
 we want to attach gdb.
 
 ```json
 {
-    "ASLR": false, 
+    "ASLR": false,
     "addresses": {
-        "clock_interval": 59514112, 
-        "socks_proxy_server_start": 22139744, 
+        "clock_interval": 59514112,
+        "socks_proxy_server_start": 22139744,
         "aaa_admin_authenticate": 418288
-    }, 
-    "fw": "asav941-200.qcow2", 
+    },
+    "fw": "asav941-200.qcow2",
     "lina_imagebase": 4194304,
     "version": "9.4.1.200",
     "arch": 64
@@ -166,13 +166,13 @@ firmware_type=gdb
 attach_gdb=yes
 ```
 
-Note also that we need to specify a `firmware_type` which indicates if the 
+Note also that we need to specify a `firmware_type` which indicates if the
 firmware is unmodified, rooted or if gdb has been enabled at boot. This is
-because we will do different things at boot depending on the format. Here we 
+because we will do different things at boot depending on the format. Here we
 can see that we use a modified firmware `asa924-k8-debugshell-gdbserver.bin`
-which has gdbserver enabled at boot and contains a debug shell. 
+which has gdbserver enabled at boot and contains a debug shell.
 We see below that when the bootrom starts, asadbg automatically
-interrupts the sequence in order to load the firmware and config files already 
+interrupts the sequence in order to load the firmware and config files already
 on the CF card.
 
 ```
@@ -226,18 +226,18 @@ Continuing.
 
 Numerous parts of asadbg rely on a database `asadbg/asadb.json` that
 contains symbols for various firmware versions. We have supplied a small
-number of existing symbols, however you can add others manually or use 
+number of existing symbols, however you can add others manually or use
 [idahunt](https://github.com/nccgroup/idahunt)
 to automatically add new targets. This section details how to do it.
 
 ## Requirements
 
-The IDA Python scripts in asadbg assume that `filelock.py/ida_helper.py` are 
-available. Since they are executed directly from IDA Python, the way we have 
-done it so far is by creating symlinks in `asadbg/`. We can’t really create them 
-on the repo as the symlinks on Windows are different than on Linux. Consequently 
+The IDA Python scripts in asadbg assume that `filelock.py/ida_helper.py` are
+available. Since they are executed directly from IDA Python, the way we have
+done it so far is by creating symlinks in `asadbg/`. We can’t really create them
+on the repo as the symlinks on Windows are different than on Linux. Consequently
 it is required to do manually.
- 
+
 On Linux:
 
 ```
@@ -260,7 +260,7 @@ C:\idahunt>set ASADBG_DB=C:\asadbg\asadb.json
 
 ## Initial analysis and renaming
 
-We assume you have extracted all the firmware into a directory using e.g. 
+We assume you have extracted all the firmware into a directory using e.g.
 [asafw](https://github.com/nccgroup/asafw) or that you
 extracted only the `lina` files and dropped them into a hierarchy that indicates
 what firmware they come from:
@@ -398,7 +398,7 @@ $ comm.py --comm ssh --reboot
 if you have a running CLI, you should see it automatically reboots:
 
 ```
-ciscoasa#  
+ciscoasa#
 
 ***
 *** --- START GRACEFUL SHUTDOWN ---
@@ -457,7 +457,7 @@ We use `find_lina_pid.py` to find the lina PID.
 Then we use `info proc mappings <pid>` to get the mapping.
 
 ```
-(gdb) source find_lina_pid.py 
+(gdb) source find_lina_pid.py
 Finding lina PID:
 516
 You can use the following to see the lina mapping: info proc mappings <pid>
@@ -470,11 +470,11 @@ Mapped address spaces:
 	 0xa388000  0xa38a000     0x2000  0x233f000 /asa/bin/lina
 	 0xa38a000  0xa9aa000   0x620000  0x2341000 /asa/bin/lina
 	 0xa9aa000  0xb74b000   0xda1000  0xa9aa000 [heap]
-	0xa5ad9000 0xa5bda000   0x101000 0xa5ad9000 
+	0xa5ad9000 0xa5bda000   0x101000 0xa5ad9000
 	0xa5bda000 0xa5bde000     0x4000        0x0 /dev/zero (deleted)
-	0xa5bde000 0xa5de1000   0x203000 0xa5bde000 
+	0xa5bde000 0xa5de1000   0x203000 0xa5bde000
 	0xa5de1000 0xa5de5000     0x4000 0x50004000 /dev/mem
-	0xa5de5000 0xa5fe7000   0x202000 0xa5de5000 
+	0xa5de5000 0xa5fe7000   0x202000 0xa5de5000
 	0xa5fe7000 0xa5fe8000     0x1000 0xffb00000 /dev/mem
 	0xa5fe8000 0xa5ff8000    0x10000 0xfff00000 /dev/mem
 	0xa5ff8000 0xa6000000     0x8000    0xd8000 /dev/mem
@@ -485,12 +485,12 @@ Mapped address spaces:
 	0xabc00000 0xac000000   0x400000  0x3400000 /SYSV00000002 (deleted)
 	0xac000000 0xac400000   0x400000  0x3800000 /SYSV00000002 (deleted)
 	0xac400000 0xdbc00000 0x2f800000  0x3c00000 /SYSV00000002 (deleted)
-	0xdbf55000 0xdbf58000     0x3000 0xdbf55000 
+	0xdbf55000 0xdbf58000     0x3000 0xdbf55000
 	0xdbf58000 0xdc091000   0x139000        0x0 /lib/libc-2.9.so
 	0xdc091000 0xdc092000     0x1000   0x139000 /lib/libc-2.9.so
 	0xdc092000 0xdc094000     0x2000   0x139000 /lib/libc-2.9.so
 	0xdc094000 0xdc095000     0x1000   0x13b000 /lib/libc-2.9.so
-	0xdc095000 0xdc098000     0x3000 0xdc095000 
+	0xdc095000 0xdc098000     0x3000 0xdc095000
 	0xdc098000 0xdc0a2000     0xa000        0x0 /lib/libgcc_s.so.1
 	0xdc0a2000 0xdc0a3000     0x1000     0x9000 /lib/libgcc_s.so.1
 	0xdc0a3000 0xdc0a4000     0x1000     0xa000 /lib/libgcc_s.so.1
@@ -503,7 +503,7 @@ Mapped address spaces:
 	0xffffe000 0xfffff000     0x1000        0x0 [vdso]
 	0xdc0e0000 0xdc0e1000     0x1000     0xa000 /usr/lib/libcgroup.so.1.0.34
 	0xdc0e1000 0xdc0e2000     0x1000     0xb000 /usr/lib/libcgroup.so.1.0.34
-	0xdc0e2000 0xdc6dc000   0x5fa000 0xdc0e2000 
+	0xdc0e2000 0xdc6dc000   0x5fa000 0xdc0e2000
 	0xdc6dc000 0xdc6e3000     0x7000        0x0 /lib/librt-2.9.so
 	0xdc6e3000 0xdc6e4000     0x1000     0x6000 /lib/librt-2.9.so
 	0xdc6e4000 0xdc6e5000     0x1000     0x7000 /lib/librt-2.9.so
@@ -513,19 +513,19 @@ Mapped address spaces:
 	0xdc6e9000 0xdc6fd000    0x14000        0x0 /lib/libpthread-2.9.so
 	0xdc6fd000 0xdc6fe000     0x1000    0x13000 /lib/libpthread-2.9.so
 	0xdc6fe000 0xdc6ff000     0x1000    0x14000 /lib/libpthread-2.9.so
-	0xdc6ff000 0xdc701000     0x2000 0xdc6ff000 
+	0xdc6ff000 0xdc701000     0x2000 0xdc6ff000
 	0xdc701000 0xdc71c000    0x1b000        0x0 /usr/lib/libexpat.so.1.6.0
 	0xdc71c000 0xdc71e000     0x2000    0x1a000 /usr/lib/libexpat.so.1.6.0
 	0xdc71e000 0xdc71f000     0x1000    0x1c000 /usr/lib/libexpat.so.1.6.0
 	0xdc71f000 0xdc7cd000    0xae000        0x0 /lib/libstdc++.so.6.0.10
 	0xdc7cd000 0xdc7d1000     0x4000    0xad000 /lib/libstdc++.so.6.0.10
 	0xdc7d1000 0xdc7d2000     0x1000    0xb1000 /lib/libstdc++.so.6.0.10
-	0xdc7d2000 0xdc7d8000     0x6000 0xdc7d2000 
+	0xdc7d2000 0xdc7d8000     0x6000 0xdc7d2000
 	0xdc7d8000 0xdc7dd000     0x5000        0x0 /usr/lib/libnuma.so.1
 	0xdc7dd000 0xdc7de000     0x1000     0x4000 /usr/lib/libnuma.so.1
 	0xdc7de000 0xdc7df000     0x1000     0x5000 /usr/lib/libnuma.so.1
-	0xdc7df000 0xdc7e0000     0x1000 0xdc7df000 
-	0xdc7e1000 0xdc7e2000     0x1000 0xdc7e1000 
+	0xdc7df000 0xdc7e0000     0x1000 0xdc7df000
+	0xdc7e1000 0xdc7e2000     0x1000 0xdc7e1000
 	0xdc7e2000 0xdc7fe000    0x1c000        0x0 /lib/ld-2.9.so
 	0xdc7fe000 0xdc7ff000     0x1000    0x1b000 /lib/ld-2.9.so
 	0xdc7ff000 0xdc800000     0x1000    0x1c000 /lib/ld-2.9.so
