@@ -276,7 +276,7 @@ if __name__ == '__main__':
 
     if args.asadbg_config:
         if not os.path.exists(args.asadbg_config):
-            logmsg("ERROR: Couldn't find specified config entry: %s" % name)
+            logmsg("ERROR: Couldn't find specified asadbg config file: %s" % asadbg_config)
             sys.exit(1)
         dirs.insert(0, args.asadbg_config)
         logmsg("Will load config file from --asadbg-config: %s" % args.asadbg_config)

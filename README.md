@@ -44,6 +44,7 @@ information on what they are for:
 ## Requirements
 
 * Python3 only
+  * pip3 install pyserial paramiko
 * Heavily tested on Linux (but could work on OS X to)
 * Preloaded firmware on the flash of real ASA device or ASA emulator configured
   in GNS3

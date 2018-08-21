@@ -41,7 +41,7 @@ def logmsg(s, end=None):
 try:
     os.environ["ASATOOLS"]
 except:
-    logmsg("Error: Consider using source env.sh")
+    logmsg("Error: Consider using source env.sh (use sudo -E to preserve environment)")
     sys.exit()
 SSHUSER = os.environ["ASA_USER"]
 SSHPASSWORD = os.environ["ASA_PASS"]
