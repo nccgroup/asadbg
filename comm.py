@@ -82,27 +82,39 @@ PROTOCOL_SERIAL = "serial"
 PROTOCOL_TELNET = "telnet"
 PROTOCOL_SSH    = "ssh"
 
+SHELLTYPE_CISCO_CLI = "cli"
+SHELLTYPE_DEBUG_SHELL = "bash"
+
 class Comm:
-    def __init__(self):
+    def __init__(self, shell_type=SHELLTYPE_CISCO_CLI):
         self.tn = None
         self.ser = None
         self.ssh = None
         self.ssh_stdin = None
         self.ssh_stdout = None
         self.ssh_stderr = None
+        self.shell_type = shell_type
+        if self.shell_type == SHELLTYPE_CISCO_CLI:
+            logmsg("Assuming a Cisco CLI")
+            self.shell = b">"
+        elif self.shell_type == SHELLTYPE_DEBUG_SHELL:
+            logmsg("Assuming a debug shell")
+            self.shell = b"bash-4.2#"
     
     def info(self):
         if self.tn != None:
-            logmsg("tn.info() not supported yet")
+            logmsg("Telnet: %s:%d" % (self.tn.host, self.tn.port))
         elif self.ser != None:
             logmsg("Serial: %s" % self.ser.port)
         elif self.ssh != None:
             t = self.ssh.get_transport()
             logmsg("SSH: %s:%d" % t.getpeername())
         else:
-            print("Comm.info failed")
+            logmsg("Comm.info failed")
 
-    def read(self, byte=b">", show=True, wait=2):
+    def read(self, byte=None, show=True, wait=2):
+        if byte == None:
+            byte = self.shell
         if self.tn != None:
             return self.telnet_read(byte)
         elif self.ser != None:
@@ -110,7 +122,7 @@ class Comm:
         elif self.ssh != None:
             return self.ssh_read(wait)
         else:
-            print("Comm.read failed")
+            logmsg("Comm.read failed")
             return None
 
     def write(self, dat):
@@ -121,7 +133,7 @@ class Comm:
         elif self.ssh != None:
             return self.ssh_write(dat)
         else:
-            print("Comm.write failed")
+            logmsg("Comm.write failed")
             return None
 
     # XXX - We should change this to detect errors and flag which line caused
@@ -160,36 +172,45 @@ class Comm:
             return
         try:
             logmsg("Telnet connection established")
-            self.tn.write(b"\n")
-            self.tn.write(b"\n")
-            # We do this just in case we are in an enabled shell already
-            self.tn.write(b"disable\n")
-            logmsg("Waiting for prompt")
-            self.tn.read_until(b">")
-            logmsg("Got prompt")
-            self.tn.write(b"enable\n")
-            self.tn.read_until(b"Password:")
-            self.tn.write(b"\n")
-            self.tn.read_until(b"#")
-            logmsg("Got root console")
-            logmsg("Set unlimited terminal pager")
-            self.tn.write(b"terminal pager 0\n")
-            self.tn.read_until(b"#")
-#            self.tn.write(b"show running\n")
-#            result = self.tn.read_until(b"ciscoasa#")
-#            print(result.decode('utf-8'))
-            self.tn.write(b"disable\n")
-            logmsg("Lowered privs")
+            if self.shell_type == SHELLTYPE_CISCO_CLI:
+                self.tn.write(b"\n")
+                self.tn.write(b"\n")
+                # We do this just in case we are in an enabled shell already
+                self.tn.write(b"disable\n")
+                logmsg("Waiting for prompt")
+                self.tn.read_until(self.shell)
+                logmsg("Got prompt")
+                self.tn.write(b"enable\n")
+                self.tn.read_until(b"Password:")
+                self.tn.write(b"\n")
+                self.tn.read_until(b"#")
+                logmsg("Got root console")
+                logmsg("Set unlimited terminal pager")
+                self.tn.write(b"terminal pager 0\n")
+                self.tn.read_until(b"#")
+    #            self.tn.write(b"show running\n")
+    #            result = self.tn.read_until(b"ciscoasa#")
+    #            print(result.decode('utf-8'))
+                self.tn.write(b"disable\n")
+                logmsg("Lowered privs")
+            elif self.shell_type == SHELLTYPE_DEBUG_SHELL:
+                self.tn.write(b"\n")
+                self.tn.write(b"\n")
+                logmsg("Waiting for prompt")
+                self.tn.read_until(self.shell)
+                logmsg("Got prompt")
 
         except socket.timeout:
             logmsg("Warning: Telnet timed out")
             self.close()
 
-    def telnet_read(self, byte=b">"):
+    def telnet_read(self, byte=None):
+        if byte == None:
+            byte = self.shell
         return self.tn.read_until(byte)
 
-    def telnet_write(self,dat):
-        self.tn.write(dat + "\n")
+    def telnet_write(self, dat):
+        self.tn.write(dat + b"\n")
         return
 
     def init_serial(self, port="/dev/ttyUSB0"):
@@ -221,6 +242,13 @@ class Comm:
     def ssh_write(self, dat):
         self.ssh_stdin.write(dat)
         return
+
+def start_lina(comm):
+    logmsg("Restarting lina now...")
+    comm.write(b"/asa/scripts/lina_start.sh\n")
+    comm.flush()
+    #data = comm.read()
+    #print(data)
 
 def execute_cmd(comm, cmd, config_t=False, show=True, read=True):
     comm.write('enable\n') 
@@ -849,6 +877,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--comm', dest='comm_type', default=PROTOCOL_SERIAL, \
                         help="Communication type {serial(default), telnet, ssh}")
+    parser.add_argument('--shell', dest='shell_type', default=SHELLTYPE_CISCO_CLI, \
+                        help="Communication type {cli(default), bash}")
     parser.add_argument('--port', dest='target_port', default=None, 
                         help='Specify a custom serial (e.g. "/dev/ttyUSB0")/telnet (e.g. 5000) port)')
     parser.add_argument('--ip', dest='target_ip', default="192.168.210.77", 
@@ -879,6 +909,8 @@ if __name__ == '__main__':
     parser.add_argument('--oldssh', default=False, action="store_true", 
                         help="Specify an old version of SSH (do not know specific command lines options and do not need them because unsecure :))")
     parser.add_argument('--cmd', dest='cmd', default=None, help='Command to run on the CLI (debugging)')
+    parser.add_argument('--start-lina', dest='start_lina', default=False,
+                        action="store_true", help="Use the ASA serial debug shell (Linux) to restart lina (Use telnet if GNS3)")
     parser.add_argument('-C', dest='cfg_file', default=None, help="File containing commands to use (e.g. config/setup_ssh.cfg)")
     args = parser.parse_args()
 
@@ -898,7 +930,7 @@ if __name__ == '__main__':
         logmsg("Warning: using forced SSH")
         comm_type = PROTOCOL_SSH
 
-    comm = Comm()
+    comm = Comm(shell_type=args.shell_type)
     if comm_type == PROTOCOL_TELNET:
         if target_port == None:
             logmsg("Error: You must specify a telnet port. Check GNS3 image config")
@@ -917,6 +949,11 @@ if __name__ == '__main__':
     if args.cmd != None:
         execute_cmd(comm, args.cmd)
         print(comm.read())
+
+    if args.start_lina == True:
+        start_lina(comm)
+        comm.close()
+        sys.exit()
 
     if args.reboot == True:
         reboot_router(comm)

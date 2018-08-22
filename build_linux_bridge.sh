@@ -7,6 +7,13 @@
 # This script is designed to setup an Ubuntu host with a bridged ethernet
 # device that can be used to talk to a Cisco firmware running on GNS3/qemu
 #
+# Prerequisites
+# - sudo apt install uml-utilities
+#
+# Note:
+# On Ubuntu 18.04, it looks like br0 is the first interface in the routing table
+# so it will always use this instead of eno2?
+#
 # TODO: 
 #  - Make sure all commands are installed exit
 
