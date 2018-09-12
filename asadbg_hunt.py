@@ -79,7 +79,7 @@ def hunt(symbols, dbname, merge=True, replace=False, bin_name="lina"):
     # XXX - add fw md5 to db?
 
     prevtime = time.time()
-    lock = filelock.FileLock("asadb.json")
+    lock = filelock.FileLock("asadb_json")
     with lock.acquire():
         newtime = time.time()
         logmsg("Acquired lock after %d seconds" % int(newtime-prevtime))
