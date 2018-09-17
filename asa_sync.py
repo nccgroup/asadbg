@@ -67,6 +67,7 @@ global_mappings = {
     "asa924-k8.bin": mappings_config["32_default"],
     "asa924-24-k8.bin": mappings_config["32_default"],
     "asav941-200.qcow2": mappings_config["64_noaslr"],
+    "asa912-smp-k8.bin": mappings_config["64_noaslr"],
     "asa924-smp-k8.bin": mappings_config["64_noaslr"],
     "asav961.qcow2": mappings_config["64_aslr_disabled"],
     "asav962-7.qcow2": mappings_config["64_aslr_disabled"],
@@ -121,31 +122,34 @@ if __name__ == "__main__":
         mappings = None
     logmsg("mappings: %s" % (mappings))
 
-    ctx = {
-        # We don't have any process id while debugging Cisco ASA
-        # so we hardcode it
-        "pid": 200,
+    if mappings:
+        ctx = {
+            # We don't have any process id while debugging Cisco ASA
+            # so we hardcode it
+            "pid": 200,
 
-        # There is no mapping returned by "info proc mappings"
-        # so we hardcode it
-        # (gdb) info proc mappings
-        # Can't determine the current process's PID: you must name one.
-        "mappings": mappings
-    }
+            # There is no mapping returned by "info proc mappings"
+            # so we hardcode it
+            # (gdb) info proc mappings
+            # Can't determine the current process's PID: you must name one.
+            "mappings": mappings
+        }
 
-    sync = rs.Sync(HOST, PORT, ctx=ctx)
+        sync = rs.Sync(HOST, PORT, ctx=ctx)
     ##### end of Cisco ASA specific
 
-    rs.Syncoff(sync)
-    rs.Cmt(sync)
-    rs.Rcmt(sync)
-    rs.Fcmt(sync)
-    rs.Bc(sync)
-    rs.Translate(sync)
-    rs.Cmd(sync)
-    rs.Rln(sync)
-    rs.Bbt(sync)
-    rs.Bx(sync)
-    rs.Cc(sync)
-    rs.Patch(sync)
-    rs.Help()
+        rs.Syncoff(sync)
+        rs.Cmt(sync)
+        rs.Rcmt(sync)
+        rs.Fcmt(sync)
+        rs.Bc(sync)
+        rs.Translate(sync)
+        rs.Cmd(sync)
+        rs.Rln(sync)
+        rs.Bbt(sync)
+        rs.Bx(sync)
+        rs.Cc(sync)
+        rs.Patch(sync)
+        rs.Help()
+    else:
+        logmsg("No mapping defined for %s, ret-sync disabled" % bin_name)
