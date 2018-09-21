@@ -168,7 +168,8 @@ attach_gdb=yes
 ```
 
 Note also that we need to specify a `firmware_type` which indicates if the
-firmware is unmodified, rooted or if gdb has been enabled at boot. This is
+firmware is unmodified, rooted, has a serial shell enabled or if gdb has 
+been enabled at boot. This is
 because we will do different things at boot depending on the format. Here we
 can see that we use a modified firmware `asa924-k8-debugshell-gdbserver.bin`
 which has gdbserver enabled at boot and contains a debug shell.

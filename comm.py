@@ -4,7 +4,7 @@
 # Copyright (c) 2017, Aaron Adams <aaron.adams(at)nccgroup(dot)trust>
 # Copyright (c) 2017, Cedric Halbronn <cedric.halbronn(at)nccgroup(dot)trust>
 #
-# Tools to use serial / telnet / SSH to issue commands, reboot the router, 
+# Tools to use serial / telnet / SSH to issue commands, reboot the router,
 # transfer files between the host and the router, etc.
 #
 # Dependencies:
@@ -14,7 +14,7 @@
 #   allow to scp specifying the password from the command line
 #
 # Known problems
-# - sometimes the scp commands returns "Write failed: Broken pipe" but the file 
+# - sometimes the scp commands returns "Write failed: Broken pipe" but the file
 #   is actually transfered successfully anyway.
 # - you must have connected to the router first so your key is added. Otherwise
 #   the script does not handle the "The authenticity of host '192.168.210.77
@@ -47,7 +47,7 @@ SSHUSER = os.environ["ASA_USER"]
 SSHPASSWORD = os.environ["ASA_PASS"]
 
 ############ Helpers ############
-    
+
 ### Serial helpers
 
 # Seems to be a sporadic kernel bug that causes exceptions
@@ -69,7 +69,7 @@ def read_channel(stdout, wait=2):
     # BUG: https://github.com/paramiko/paramiko/issues/109
     # when it comes to stdout.read() , it hangs...
     # it is due to stdout.channel.eof_received == 0
-    # a workaround is to wait for a timeout, force stdout.channel.close() 
+    # a workaround is to wait for a timeout, force stdout.channel.close()
     # and then stdout.read()
     time.sleep(wait)
     stdout.channel.shutdown_write()
@@ -100,7 +100,7 @@ class Comm:
         elif self.shell_type == SHELLTYPE_DEBUG_SHELL:
             logmsg("Assuming a debug shell")
             self.shell = b"bash-4.2#"
-    
+
     def info(self):
         if self.tn != None:
             logmsg("Telnet: %s:%d" % (self.tn.host, self.tn.port))
@@ -251,10 +251,10 @@ def start_lina(comm):
     #print(data)
 
 def execute_cmd(comm, cmd, config_t=False, show=True, read=True):
-    comm.write('enable\n') 
+    comm.write('enable\n')
     comm.write('\n') # hit enter (no password)
     if config_t == True:
-        comm.write('config t\n') 
+        comm.write('config t\n')
     comm.flush()
     comm.write(cmd)
     comm.write('\n') # just in case...
@@ -294,7 +294,7 @@ def reboot_router(comm):
 def get_version(comm, show=False):
     logmsg("Retrieving version now...")
     comm.info()
-    
+
     out = execute_cmd(comm, "show version", show=show)
     #print("-"*10)
     #print(out)
@@ -319,13 +319,13 @@ def enable_checkheaps(comm, show=False):
 
     # This is to force checkheaps to run very often
     execute_cmd(comm, "checkheaps check-interval 1", config_t=True, show=show)
-    
+
 def show_checkheaps(comm, show=True):
     logmsg("Showing checkheaps now...")
     comm.info()
 
     execute_cmd(comm, "show checkheaps", config_t=True, show=show)
-    
+
 def is_file_on_router(comm, filename, ip="192.168.210.77"):
     found = True
     comm.flush()
@@ -374,7 +374,7 @@ def download_file(comm, localpath, remotepath, ip="192.168.210.77", oldssh=False
 def clear_ike_sa(comm, show=False):
     logmsg("Clearing IKE SAs...")
     comm.info()
-    
+
     comm.flush()
     comm.write('clear crypto isakmp sa\n')
     comm.flush()
@@ -391,7 +391,7 @@ def clear_ike_sa(comm, show=False):
 def logoff_webvpn_sessions(comm, show=False):
     logmsg("Clearing WebVPN sessions...")
     comm.info()
-    
+
     comm.flush()
     comm.write('vpn-sessiondb logoff webvpn noconfirm\n')
     comm.flush()
@@ -421,7 +421,7 @@ def compute_md5(comm, filename, show=False):
         logmsg("%s = %s" % (filename, res))
 
 ############ Boot sequence parsing (over serial) ############
-            
+
 # use for non-rooted firmware (unmodified or with gdb enabled)
 def boot_router_cli_non_rooted(ser, boot_firmware, boot_config=None):
     logmsg("Waiting boot...")
@@ -531,7 +531,13 @@ def boot_router_cli_non_rooted(ser, boot_firmware, boot_config=None):
             "/dev/ttyS0" in data:
             logmsg("gdb detected - boot finished.")
             break
-         
+        # for a firmware with serial shell enabled, we never get a Cisco CLI but
+        # instead get a Linux shell
+        if "/bin/sh: can't access tty;" in data:
+            data = serial_read(ser, 4096)
+            print(data, end='', flush=True)
+            logmsg("Serial shell detected - boot finished.")
+            break
 
     logmsg("Boot should be finished now?")
 
@@ -723,7 +729,7 @@ def execute_cmd_over_serial(cmd, ser, confirm_list=[], config_t=False):
             break
         serial_write(ser, "\n") # hit enter (confirm)
 
-    # exit from config 
+    # exit from config
     if config_t:
         serial_write(ser, "exit\n")
         print(serial_read(ser, 4096))
@@ -742,8 +748,8 @@ def enable_checkheaps_over_serial(ser):
 def disable_crashdumps_over_serial(ser):
     result = execute_cmd_over_serial("crashinfo console disable", ser, config_t=True)
     result = execute_cmd_over_serial("crashinfo save disable", ser, config_t=True)
-    
-# We assume the ASA has been booted with the config file and with the ASA version that we want to 
+
+# We assume the ASA has been booted with the config file and with the ASA version that we want to
 # use for the next boot (and all following ones). Consequently, both "boot config" and "boot system"
 # are defined and are part of the "running-config"
 def setup_boot_config_and_system(ser, configfile, systemfile):
@@ -755,7 +761,7 @@ def setup_boot_config_and_system(ser, configfile, systemfile):
     execute_cmd_over_serial("boot system %s" % systemfile, ser, config_t=True)
     execute_cmd_over_serial("boot config %s" % configfile, ser)
     execute_cmd_over_serial("show running-config boot", ser) # debug
-    # we don't use "write memory" as it will effectively replace the config file defined in 
+    # we don't use "write memory" as it will effectively replace the config file defined in
     # "boot config ..." instead of replacing the startup-config
     execute_cmd_over_serial("copy running-config startup-config", ser, confirm_list=["Source filename"])
     reboot_over_serial(ser)
@@ -860,7 +866,7 @@ def gdb_ctrl_c_main(comm, target_ip, user, password, revHost="0.0.0.0", revPort=
     th = threading.Thread(target=gdb_ctrl_c_thread_interact, args=(revHost, revPort))
     th.daemon = True
     th.start()
-    
+
     logmsg("Triggering SSH connection")
     comm.init_ssh(target_ip, user, password, connectOnly=True)
 
@@ -879,9 +885,9 @@ if __name__ == '__main__':
                         help="Communication type {serial(default), telnet, ssh}")
     parser.add_argument('--shell', dest='shell_type', default=SHELLTYPE_CISCO_CLI, \
                         help="Communication type {cli(default), bash}")
-    parser.add_argument('--port', dest='target_port', default=None, 
+    parser.add_argument('--port', dest='target_port', default=None,
                         help='Specify a custom serial (e.g. "/dev/ttyUSB0")/telnet (e.g. 5000) port)')
-    parser.add_argument('--ip', dest='target_ip', default="192.168.210.77", 
+    parser.add_argument('--ip', dest='target_ip', default="192.168.210.77",
                         help="Cisco ASA/GNS3 IP address")
     parser.add_argument('--user', dest='user', default=None, help='User for SSH')
     parser.add_argument('--pass', dest='password', default=None, help='Password for SSH')
@@ -889,24 +895,24 @@ if __name__ == '__main__':
                         help='Reboot router (serial, SSH)')
     parser.add_argument('--version', dest='version', default=False,
                         action="store_true", help="Get the version (serial, SSH)")
-    parser.add_argument('--disable-checkheaps', dest='delay_checkheaps', default=False, action="store_true", 
+    parser.add_argument('--disable-checkheaps', dest='delay_checkheaps', default=False, action="store_true",
                         help='Disable checkheaps default timeout (60 sec)')
-    parser.add_argument('--show-checkheaps', dest='show_checkheaps', default=False, action="store_true", 
+    parser.add_argument('--show-checkheaps', dest='show_checkheaps', default=False, action="store_true",
                         help='Show checkheaps status')
     parser.add_argument('--upload', dest='upload', default=False, action="store_true", help='Upload over SSH')
     parser.add_argument('--force', dest='force', action="store_true", help='Overwrite existing files')
     parser.add_argument('--download', dest='download', default=False, action="store_true",
                         help='Download over SSH')
     parser.add_argument('--delete-ike-sa', dest='delete_ike_sa', action="store_true", help='Delete IKE SAs (serial, SSH)')
-    parser.add_argument('--delete-webvpn-sessions', dest='delete_webvpn_sa', action="store_true", 
+    parser.add_argument('--delete-webvpn-sessions', dest='delete_webvpn_sa', action="store_true",
                         help='Delete WebVPN sessions (serial, SSH)')
     parser.add_argument('--md5', dest='md5', default=False,
                         action="store_true", help="Compute MD5 for files (serial, SSH)")
     parser.add_argument('--ctrlc', dest='ctrlc', default=False,
                         action="store_true", help="Simulate a CTRL^C in GDB by interacting with the debug shell")
-    parser.add_argument('--input', dest='input', default=None, nargs="*", 
+    parser.add_argument('--input', dest='input', default=None, nargs="*",
                         help='List of input files for other commands (eg: file1 file2 file3) (e.g.: --upload, --download, --md5)')
-    parser.add_argument('--oldssh', default=False, action="store_true", 
+    parser.add_argument('--oldssh', default=False, action="store_true",
                         help="Specify an old version of SSH (do not know specific command lines options and do not need them because unsecure :))")
     parser.add_argument('--cmd', dest='cmd', default=None, help='Command to run on the CLI (debugging)')
     parser.add_argument('--start-lina', dest='start_lina', default=False,
@@ -943,7 +949,7 @@ if __name__ == '__main__':
     elif comm_type == PROTOCOL_SSH:
         comm.init_ssh(args.target_ip, user, password)
     else:
-        logmsg("You have to supply a valid communication type with --comm") 
+        logmsg("You have to supply a valid communication type with --comm")
 
     # NOTE: This is mostly for debugging
     if args.cmd != None:
@@ -969,7 +975,7 @@ if __name__ == '__main__':
         delay_checkheaps(comm)
         comm.close()
         sys.exit()
-        
+
     if args.show_checkheaps == True:
         show_checkheaps(comm)
         comm.close()
@@ -982,7 +988,7 @@ if __name__ == '__main__':
         else:
             logmsg("Failed to delete SAs")
         sys.exit()
-        
+
     if args.delete_webvpn_sa == True:
         res = logoff_webvpn_sessions(comm)
         if res:

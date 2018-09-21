@@ -109,7 +109,7 @@ def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial
 
     # XXX ARCH32/ARCH64 could be removed if we don't have differences anymore?
     if target:
-        # XXX - Redundant in light of us passing arch anyway? 
+        # XXX - Redundant in light of us passing arch anyway?
         if target["arch"] == 32:
             gdbinit = gdbinit.replace('%ARCH32%', "1")
             gdbinit = gdbinit.replace('%ARCH64%', "0")
@@ -132,7 +132,7 @@ def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial
     else:
         logmsg("Warning: Assuming no ptmalloc due to no target file")
         gdbinit = gdbinit.replace('%PTMALLOC%', "0")
-        
+
     if arch == "gns3":
         gdbinit = gdbinit.replace('%TCPIP%', "1")
         gdbinit = gdbinit.replace('%SERIAL%', "0")
@@ -177,7 +177,7 @@ def build_gdbinit(rootfs_path, targetdb, gdbinit, remote_ip, remote_port, serial
 
 def show_resulting_options(version, arch, rootfs_path, firmware_type,
                                attach_gdb, firmware, config, gns3_host,
-                               gns3_port, serial_port, asadb_file, scripts):
+                               gns3_port, serial_port, serial_port_2, asadb_file, scripts):
     logmsg("-"*20)
     logmsg("version: %s" % version)
     logmsg("arch: %s" % arch)
@@ -189,6 +189,7 @@ def show_resulting_options(version, arch, rootfs_path, firmware_type,
     logmsg("gns3_host: %s" % gns3_host)
     logmsg("gns3_port: %s" % gns3_port)
     logmsg("serial_port: %s" % serial_port)
+    logmsg("serial_port_2: %s" % serial_port_2)
     logmsg("asadb_file: %s" % asadb_file)
     logmsg("scripts: %s" % str(scripts))
     logmsg("-"*20)
@@ -197,8 +198,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     # XXX - Would be nice to change the name to be more explicit that it is the
-    # actual asadbg config entry name 
-    parser.add_argument('--name', dest='name', default=None, 
+    # actual asadbg config entry name
+    parser.add_argument('--name', dest='name', default=None,
                         help='Name for an entry in a asadbg.cfg config file')
     parser.add_argument('--version', dest='version', default=None,
                         help='Router version (eg: 932200, 961, etc.)')
@@ -216,11 +217,12 @@ if __name__ == '__main__':
     # avoid confusion with the asadbg-config
     parser.add_argument('--config', dest='config', default=None,
                         help='Config filename to use (REAL ASA only and MUST already be on the flash)')
-    parser.add_argument('--gns3-host', dest='gns3_host', default=None, 
+    parser.add_argument('--gns3-host', dest='gns3_host', default=None,
                         help='IP for emulator instance (GNS3 only)')
-    parser.add_argument('--gns3-port', dest='gns3_port', default=None, help='Serial port (REAL ASA only)')
-    parser.add_argument('--serial-port', dest='serial_port', default=None, help='TCP port for emulator instance (GNS3 only)')
-    parser.add_argument('--asadb-file', dest='asadb_file', default=None, 
+    parser.add_argument('--gns3-port', dest='gns3_port', default=None, help='TCP port for emulator instance (GNS3 only)')
+    parser.add_argument('--serial-port', dest='serial_port', default=None, help='Serial port (REAL ASA only)')
+    parser.add_argument('--serial-port-2', dest='serial_port_2', default=None, help='2nd serial port for serialshell enabled firmware - port used for gdb (REAL ASA only)')
+    parser.add_argument('--asadb-file', dest='asadb_file', default=None,
                         help='Database for targets (e.g. asadb.json)')
 
     parser.add_argument('--ret-sync', dest='ret_sync', default=False, action="store_true",
@@ -235,6 +237,8 @@ if __name__ == '__main__':
                         help='Try to find lina PID')
     parser.add_argument('--reboot', dest='reboot', action='store_true',
                         help='Reboot the router manually before loading new version (REAL ASA only)')
+    parser.add_argument('--already-booted', dest='already_booted', action='store_true',
+                        help='Indicates the ASA is already booted. Useful when working with a serial shell-enabled firmware so we only attach to gdbserver')
     parser.add_argument('--dolog', dest='dolog', default=False, action="store_true",
                         help='Enable logging for screen in case of no gdb attached')
     parser.add_argument('--asadbg-config', dest='asadbg_config', default=None,
@@ -253,7 +257,10 @@ if __name__ == '__main__':
     config = None # Use "startup-config" by default
     gns3_host = "localhost"
     gns3_port = "8000"
+    # For any non-serialshell enabled firmware, there is only one serial port supported
+    # hence the same value
     serial_port = "/dev/ttyUSB0"
+    serial_port_2 = "/dev/ttyUSB0"
     asadb_file = None
     ret_sync = args.ret_sync
     display = args.display
@@ -262,6 +269,7 @@ if __name__ == '__main__':
     find_lina = args.find_lina
     reboot = args.reboot
     dolog = args.dolog
+    already_booted = args.already_booted
 
     # Default values from one config file
     scriptdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -296,6 +304,8 @@ if __name__ == '__main__':
                     gns3_host = cp.get("GLOBAL", "gns3_host")
                 if cp.has_option("GLOBAL", "serial_port"):
                     serial_port = cp.get("GLOBAL", "serial_port")
+                if cp.has_option("GLOBAL", "serial_port_2"):
+                    serial_port_2 = cp.get("GLOBAL", "serial_port_2")
                 if cp.has_option("GLOBAL", "asadb_file"):
                     asadb_file = cp.get("GLOBAL", "asadb_file")
                 if cp.has_option("GLOBAL", "scripts"):
@@ -306,6 +316,8 @@ if __name__ == '__main__':
                     gns3_host = cp.get(name, "gns3_host")
                 if cp.has_option(name, "serial_port"):
                     serial_port = cp.get(name, "serial_port")
+                if cp.has_option(name, "serial_port_2"):
+                    serial_port_2 = cp.get(name, "serial_port_2")
                 if cp.has_option(name, "asadb_file"):
                     asadb_file = cp.get(name, "asadb_file")
                 if cp.has_option(name, "version"):
@@ -359,13 +371,15 @@ if __name__ == '__main__':
         gns3_port = args.gns3_port
     if args.serial_port != None:
         serial_port = args.serial_port
+    if args.serial_port_2 != None:
+        serial_port_2 = args.serial_port_2
     if args.asadb_file != None:
         asadb_file = args.asadb_file
 
     if args.verbose:
         show_resulting_options(version, arch, rootfs_path, firmware_type,
                                attach_gdb, firmware, config, gns3_host,
-                               gns3_port, serial_port, asadb_file, scripts)
+                               gns3_port, serial_port, serial_port_2, asadb_file, scripts)
 
     if args.firmware == None and args.name == None:
         logmsg("WARNING: You failed to specify a firmware file (--firmware) or a asadbg config section (--name)")
@@ -381,7 +395,7 @@ if __name__ == '__main__':
         logmsg("Using gdb from path: '%s'" % GDB)
 
     if attach_gdb and not version:
-        logmsg("Error: You must specify a valid ASA version for attaching to gdb")
+        logmsg("Error: You must specify a valid ASA version for attaching gdb")
         sys.exit()
     if version and "." in version:
         logmsg("Stripping dots from version: %s" % version)
@@ -396,14 +410,15 @@ if __name__ == '__main__':
             logmsg("Error: Maybe specify extracted path with --rootfs-path")
             sys.exit()
 
-        if not is_debugging_path_ok(version, rootfs_path, asadb_file, arch, 
+        if not is_debugging_path_ok(version, rootfs_path, asadb_file, arch,
                                     verbose=args.verbose):
             logmsg("Error: You must extract the firmware to the configured path to debug it")
             sys.exit()
         logmsg("Going to debug...")
     else:
         logmsg("Not attaching gdb. Going to just load firmware/config...")
-        
+
+    # Sanity checks
     if arch == "gns3":
         if not attach_gdb:
             logmsg("Error: In GNS3, we only support attaching to a listening gdbserver")
@@ -415,6 +430,7 @@ if __name__ == '__main__':
             sys.exit()
         else:
             logmsg("Using GNS3 emulator %s:%s" % (gns3_host, gns3_port))
+        already_booted = True # we only support attaching to an already listening gdbserver
     else:
         logmsg("Using serial port: %s" % serial_port)
         if attach_gdb and getpass.getuser() != "root":
@@ -426,6 +442,8 @@ if __name__ == '__main__':
                 logmsg("Error: Can't access serial. It does not exist, is already used or you need root")
                 sys.exit()
 
+    # It is real ASA specific as in GNS3 case we assume it is already booted and we attach to gdbserver
+    if not already_booted:
         if attach_gdb and firmware_type != "rooted" and firmware_type != "gdb":
             logmsg("Error: You need a gdb-enabled or rooted firmware to debug REAL ASA")
             logmsg('       Specify "rooted" or "gdb" with firmware_type if this is the case')
@@ -457,10 +475,15 @@ if __name__ == '__main__':
         # gdbinit file patched and written before executing gdb
         gdbinit_data = open('template_gdbinit', 'rb').read().decode('UTF-8')
 
-        logmsg("Starting gdb now...")
+        if firmware_type == "serialshell":
+            serial_port_for_gdb = serial_port_2
+        else:
+            serial_port_for_gdb = serial_port
+
+        logmsg("Starting gdb now, attaching on serial port: %s" % serial_port_for_gdb)
         gdbinitfile = build_gdbinit(rootfs_path=rootfs_path, targetdb=asadb_file,
                                     gdbinit=gdbinit_data, remote_ip=gns3_host,
-                                    remote_port=gns3_port, serial_port=serial_port,
+                                    remote_port=gns3_port, serial_port=serial_port_for_gdb,
                                     version=version, arch=arch,
                                     scripts=scripts, use_retsync=ret_sync,
                                     cont=continue_exec,
