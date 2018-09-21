@@ -208,7 +208,7 @@ if __name__ == '__main__':
     parser.add_argument('--rootfs-path', dest='rootfs_path', default=None,
                         help='Path to the extracted rootfs (debugging only)')
     parser.add_argument('--firmware-type', dest='firmware_type', default=None,
-                        help='Firmware type {normal, rooted, gdb}')
+                        help='Firmware type {normal, rooted, gdb, serialshell}')
     parser.add_argument('--attach-gdb', dest='attach_gdb', action='store_true',
                         help='Attach to gdbserver at startup')
     parser.add_argument('--firmware', dest='firmware', default=None,
