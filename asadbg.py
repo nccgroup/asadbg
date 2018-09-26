@@ -224,7 +224,8 @@ if __name__ == '__main__':
     parser.add_argument('--serial-port-2', dest='serial_port_2', default=None, help='2nd serial port for serialshell enabled firmware - port used for gdb (REAL ASA only)')
     parser.add_argument('--asadb-file', dest='asadb_file', default=None,
                         help='Database for targets (e.g. asadb.json)')
-
+    parser.add_argument('--list-names', dest='list_names', action="store_true",
+                        help='List name entries in current asadbg.cfg config file')
     parser.add_argument('--ret-sync', dest='ret_sync', default=False, action="store_true",
                         help='Load ret-sync (debugging only)')
     parser.add_argument('--display', dest='display', default=False, action="store_true",
@@ -288,6 +289,15 @@ if __name__ == '__main__':
             sys.exit(1)
         dirs.insert(0, args.asadbg_config)
         logmsg("Will load config file from --asadbg-config: %s" % args.asadbg_config)
+
+    if args.list_names:
+        for confpath in dirs:
+            if os.path.exists(confpath):
+                logmsg("Using config file: %s" % confpath)
+                cp = configparser.SafeConfigParser()
+                cp.read(confpath)
+                pprint.pprint(cp.sections())
+        sys.exit()
 
     # Don't look for a name if one wasn't asked for
     if name != None:
