@@ -11,6 +11,7 @@
 
 import sys
 import traceback
+import struct
 
 # Our own libraries
 cwd = os.getcwd()
