@@ -14,6 +14,7 @@ import binascii
 import os
 import re
 import string
+import sys
 
 # Note that the current way of importing an external script such as
 # ida_helper.py in IDA makes it impossible to modify it and then reload the
