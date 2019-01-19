@@ -450,7 +450,7 @@ def find_lina_signature_check():
         while count <= 4:
             e = NextHead(e)
             print(GetDisasm(e))
-            if GetDisasm(e).startswith("jz"):
+            if GetDisasm(e).startswith("jz") or GetDisasm(e).startswith("jnz"):
                 MyMakeName(e, "jz_after_code_sign_verify_signature_image")
                 logmsg("jz_after_code_sign_verify_signature_image = 0x%x" % e)
                 bFound = True
