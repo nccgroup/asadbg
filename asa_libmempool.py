@@ -43,7 +43,10 @@ mp_global_symbols = {
         "mp_mstate": 0x7ffff6e273c0,
     },
     "asa924-k8.bin":{
-        "mp_mstate" : 0xa84001e4
+        "mp_mstate" : 0xa84001e4,
+    },
+    "asa912-smp-k8.bin":{
+        "mp_mstate" : 0x7fff1ebf73b8,
     },
 }
 
