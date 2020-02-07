@@ -139,6 +139,9 @@ if __name__ == "__main__":
     ##### end of Cisco ASA specific
 
         rs.Syncoff(sync)
+        rs.Syncmodauto(sync)
+        rs.Idblist(sync)
+        rs.Idbn(sync)
         rs.Cmt(sync)
         rs.Rcmt(sync)
         rs.Fcmt(sync)
@@ -150,6 +153,6 @@ if __name__ == "__main__":
         rs.Bx(sync)
         rs.Cc(sync)
         rs.Patch(sync)
-        rs.Help()
+        rs.Help(sync)
     else:
         logmsg("No mapping defined for %s, ret-sync disabled" % bin_name)
