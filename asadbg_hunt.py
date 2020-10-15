@@ -10,7 +10,6 @@
 # Assume you previously used asadbg_rename.py.
 
 import argparse
-import filelock
 import json
 import os
 import re
@@ -31,6 +30,7 @@ import helper
 ida_helper_path = os.path.abspath(os.path.join(sys.path[-1], "..", "idahunt"))
 sys.path.insert(0, ida_helper_path)
 import ida_helper
+import filelock
 
 #from ida_helper import *
 
@@ -136,20 +136,20 @@ def hunt(symbols, dbname, merge=True, replace=False, bin_name="lina"):
             logmsg("Skipping target: %s (%s)" % (version, fw))
         # sort targets by version. Drawback: index changes each time we add
         # a new firmware but it should not anymore once we have them all
-        targets = sorted(targets, key=lambda k: map(int, k["version"].split(".")))
-
+        targets = sorted(targets, key=lambda k: [int(x) for x in k["version"].split(".")])
+        
         logmsg("Writing to %s" % dbname)
-        open(dbname, "wb").write(json.dumps(targets, indent=4))
+        open(dbname, "w").write(json.dumps(targets, indent=4))
 
 
 def main_lina(dbname):
     symbols = {
-        "clock_interval":idc.LocByName, 
-        "mempool_array":idc.LocByName, 
-        "mempool_list_":idc.LocByName, 
-        "socks_proxy_server_start":idc.LocByName,
-        "aaa_admin_authenticate":idc.LocByName,
-        "mempool_list_":idc.LocByName,
+        "clock_interval":idc.get_name_ea_simple, 
+        "mempool_array":idc.get_name_ea_simple, 
+        "mempool_list_":idc.get_name_ea_simple, 
+        "socks_proxy_server_start":idc.get_name_ea_simple,
+        "aaa_admin_authenticate":idc.get_name_ea_simple,
+        "mempool_list_":idc.get_name_ea_simple,
     }
     symbols32 = {}
     symbols64 = {}
@@ -165,7 +165,7 @@ def main_lina(dbname):
 
 def main_lina_monitor(dbname):
     symbols = {
-        "jz_after_code_sign_verify_signature_image":idc.LocByName,
+        "jz_after_code_sign_verify_signature_image":idc.get_name_ea_simple,
     }
     if ida_helper.ARCHITECTURE == 32:
         logmsg("WARNING: not supported/tested yet")

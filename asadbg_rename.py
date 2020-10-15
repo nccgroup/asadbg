@@ -54,28 +54,28 @@ def rename_unicorn_log_impl():
 # funcstr_helpers: Looks like 1 symbol is sufficient for now
 def rename_logging_function(log_funcname, funcstr_helpers):
     global ERROR_MINUS_1
-    tmp = LocByName(log_funcname)
+    tmp = get_name_ea_simple(log_funcname)
     if tmp != ERROR_MINUS_1:
         logmsg("rename_logging_function: '%s' already defined" % log_funcname)
         return True
 
     log_funcaddr = None
     for s in funcstr_helpers:
-        addrstr = LocByName(s)
+        addrstr = get_name_ea_simple(s)
         if addrstr == ERROR_MINUS_1:
             continue
 
         for e in get_xrefs(addrstr):
-            e = NextHead(e)
+            e = next_head(e)
             count = 0
             # we only supports 10 instructions forwards looking for the "call <log_funcaddr>"
             # but it should be enough because the funcstr_helpers strings are passed
             # as arguments to the call
             while count <= 10:
                 if GetDisasm(e).startswith("call"):
-                    log_funcaddr = GetOperandValue(e, 0)
+                    log_funcaddr = get_operand_value(e, 0)
                     break
-                e = NextHead(e)
+                e = next_head(e)
                 count += 1
             if log_funcaddr != None:
                 break
@@ -85,7 +85,7 @@ def rename_logging_function(log_funcname, funcstr_helpers):
         return False
     logmsg("Found %s = 0x%x" % (log_funcname, log_funcaddr))
 
-    if not MakeName(log_funcaddr, log_funcname):
+    if not set_name(log_funcaddr, log_funcname, SN_CHECK):
         logmsg("Should not happen: failed to rename to %s" % log_funcname)
         return False
     return True
@@ -117,9 +117,9 @@ def rename_logging_function(log_funcname, funcstr_helpers):
 #
 # By looking at the 3rd argument to the ikev2_log_exit_path function we get the name of the calling function
 # => 0876F430 = ikev2_add_ike_policy_by_addr
-def rename_using_logging_function(e=ScreenEA(), log_funcname="ikev2_log_exit_path", logfunc_arg_number=2):
+def rename_using_logging_function(e=get_screen_ea(), log_funcname="ikev2_log_exit_path", logfunc_arg_number=2):
     # are we a call instruction?
-    mnem = GetMnem(e)
+    mnem = print_insn_mnem(e)
     if mnem != "call" and mnem != "jmp":
         logmsg("ERROR: not a call instruction at 0x%x" % e)
         return False
@@ -145,13 +145,13 @@ def rename_using_logging_function(e=ScreenEA(), log_funcname="ikev2_log_exit_pat
         logmsg("0x%x not a valid offset" % args[logfunc_arg_number])
         return False
 
-    funcname = GetString(args[logfunc_arg_number])
+    funcname = get_strlit_contents(args[logfunc_arg_number]).decode('utf-8')
     func = idaapi.get_func(e)
     if not func:
         logmsg("Skipping: Could not find function for %x" % e)
         return False
-    current_func_addr = func.startEA
-    if Name(current_func_addr).startswith("sub_"):
+    current_func_addr = func.start_ea
+    if get_func_name(current_func_addr).startswith("sub_"):
         #logmsg("0x%x -> %s" % (current_func_addr, funcname))
         rename_function(current_func_addr, funcname)
     else:
@@ -182,13 +182,13 @@ def rename_functions_using_logging_function(log_funcname, logfunc_arg_number):
     global ERROR_MINUS_1
     # search for one symbol that is found using this method
     # and assume it is already done if symbol already exists
-    #tmp = LocByName("ikev2_child_sa_create")
+    #tmp = get_name_ea_simple("ikev2_child_sa_create")
     #if tmp != ERROR_MINUS_1:
     #    logmsg("rename_functions_using_ikev2_log_exit_path: 'ikev2_child_sa_create' already defined")
     #    return True
 
     count = 0
-    my_log_addr = LocByName(log_funcname)
+    my_log_addr = get_name_ea_simple(log_funcname)
     if my_log_addr == ERROR_MINUS_1:
         logmsg("ERROR: you need to find %s first. Use rename_using_logging_function() first or find it manually by using strings that look like function names such as 'ikev2_parse_packet', 'ikev2_get_sa_and_neg', etc. for IKEv2 or other for WebVPN, etc." % log_funcname)
         return False
@@ -220,26 +220,26 @@ def rename_functions_using_logging_function(log_funcname, logfunc_arg_number):
 # lina_wind_timer = set_watchdog_timer
 def rename_timer_func_and_timeout():
     global ERROR_MINUS_1
-    if LocByName("clock_interval") != ERROR_MINUS_1:
+    if get_name_ea_simple("clock_interval") != ERROR_MINUS_1:
         logmsg("clock_interval already defined")
         return True
     watchdog_timeout = None
     set_watchdog_timer = None
     seg_info = get_segments_info()
-    addr = seg_info[".data"]["startEA"]
-    while addr <= seg_info[".data"]["endEA"]:
-        addr = NextHead(addr)
+    addr = seg_info[".data"]["start_ea"]
+    while addr <= seg_info[".data"]["end_ea"]:
+        addr = next_head(addr)
         # Look for clock_interval. Note there should only be one of them
-        if Dword(addr) == 5000000:
+        if get_wide_dword(addr) == 5000000:
             break
-    if addr > seg_info[".data"]["endEA"]:
+    if addr > seg_info[".data"]["end_ea"]:
         logmsg("Could not find clock_interval in .data")
         return False
     watchdog_timeout = addr
     for e in get_xrefs(addr):
         # check that next instruction is a cmp reg, 999999
-        e = NextHead(e)
-        if GetOperandValue(e, 1) != 999999:
+        e = next_head(e)
+        if get_operand_value(e, 1) != 999999:
             continue
         # Now go backwards to check we are at the beginning of the function
         count = 0
@@ -247,11 +247,11 @@ def rename_timer_func_and_timeout():
         if not func:
             logmsg("Could not get current function for 0x%x" % e)
             return False
-        #logmsg("func = 0x%x" % func.startEA)
+        #logmsg("func = 0x%x" % func.start_ea)
         while count <= 5:
-            e = PrevHead(e)
+            e = prev_head(e)
             #logmsg("0x%x" % e)
-            if e == func.startEA:
+            if e == func.start_ea:
                 break
             count += 1
         if count > 5:
@@ -260,17 +260,17 @@ def rename_timer_func_and_timeout():
         break
     if watchdog_timeout != None:
         logmsg("clock_interval = 0x%x" % watchdog_timeout)
-        MyMakeName(watchdog_timeout, "clock_interval")
+        rename_address(watchdog_timeout, "clock_interval")
     if set_watchdog_timer != None:
         logmsg("lina_wind_timer = 0x%x" % set_watchdog_timer)
-        MyMakeName(set_watchdog_timer, "lina_wind_timer")
+        rename_address(set_watchdog_timer, "lina_wind_timer")
     return True
 
 ################## libdlmalloc ##################
 
 def get_mempool_array():
     global ARCHITECTURE
-    funcaddr = MyLocByName("free")
+    funcaddr = name_to_addr("free")
     if funcaddr == None:
         return False
     bFound = False
@@ -282,7 +282,7 @@ def get_mempool_array():
         m = re.search("mov     \w+, ds:(.*)\[\w+\]", disass)
         if m:
             mempool_array_name = m.group(1)
-            mempool_array = MyLocByName(mempool_array_name)
+            mempool_array = name_to_addr(mempool_array_name)
             if mempool_array == None:
                 logmsg("bad mempool_array_name, should not happen")
                 return False
@@ -291,7 +291,7 @@ def get_mempool_array():
     if not bFound:
         logmsg("[x] mempool_array not found")
         return False
-    MyMakeName(mempool_array, "mempool_array")
+    rename_address(mempool_array, "mempool_array")
     logmsg("mempool_array = 0x%x" % mempool_array)
     return True
 
@@ -301,14 +301,14 @@ def get_mempool_list_():
     seg_info = get_segments_info()
     global ARCHITECTURE
     global ERROR_MINUS_1
-    if LocByName("mempool_list_") != ERROR_MINUS_1:
+    if get_name_ea_simple("mempool_list_") != ERROR_MINUS_1:
         logmsg("mempool_list_ already defined")
         return True
 
     if rename_function_by_aString_being_used("aMalloc_show_to", "malloc_show_top_usage") != True:
         logmsg("failed to rename malloc_show_top_usage so can't find mempool_list_")
         return False
-    funcaddr = MyLocByName("malloc_show_top_usage")
+    funcaddr = name_to_addr("malloc_show_top_usage")
     if funcaddr == None:
         logmsg("can't find malloc_show_top_usage. Should not happen")
         return False
@@ -317,30 +317,30 @@ def get_mempool_list_():
     for e in FuncItems(funcaddr):
         # asa-smp 64-bit and asa 32-bit
         if GetOpType(e, 0) == o_reg and GetOpType(e, 1) == o_imm and \
-            GetOperandValue(e, 1) >= seg_info[".data"]["startEA"] and \
-            GetOperandValue(e, 1) <= seg_info[".data"]["endEA"]:
-                mempool_list_ = GetOperandValue(e, 1)
-                val = Dword(mempool_list_)
+            get_operand_value(e, 1) >= seg_info[".data"]["start_ea"] and \
+            get_operand_value(e, 1) <= seg_info[".data"]["end_ea"]:
+                mempool_list_ = get_operand_value(e, 1)
+                val = get_wide_dword(mempool_list_)
                 if val >= 0x100:
                     logmsg("skipping mempool_list_ = 0x%x as wrong value in there: %d" % (mempool_list_, val))
                     count += 1
                     continue
-                MyMakeName(mempool_list_, "mempool_list_")
+                rename_address(mempool_list_, "mempool_list_")
                 logmsg("mempool_list_ = 0x%x" % mempool_list_)
                 break
         # asav 64-bit
         elif GetOpType(e, 0) == o_reg and GetOpType(e, 1) == o_mem and \
-            GetOperandValue(e, 1) >= seg_info[".got"]["startEA"] and \
-            GetOperandValue(e, 1) <= seg_info[".got"]["endEA"]:
-                mempool_list__ptr = GetOperandValue(e, 1)
+            get_operand_value(e, 1) >= seg_info[".got"]["start_ea"] and \
+            get_operand_value(e, 1) <= seg_info[".got"]["end_ea"]:
+                mempool_list__ptr = get_operand_value(e, 1)
                 mempool_list_ = Qword(mempool_list__ptr)
-                val = Dword(mempool_list_)
+                val = get_wide_dword(mempool_list_)
                 if val >= 0x100:
                     logmsg("skipping mempool_list__ptr = 0x%x and mempool_list_ = 0x%x as wrong value in there: %d" % (mempool_list__ptr, mempool_list_, val))
                     count += 1
                     continue
-                MyMakeName(mempool_list__ptr, "mempool_list__ptr")
-                MyMakeName(mempool_list_, "mempool_list_")
+                rename_address(mempool_list__ptr, "mempool_list__ptr")
+                rename_address(mempool_list_, "mempool_list_")
                 logmsg("mempool_list__ptr = 0x%x" % mempool_list__ptr)
                 logmsg("mempool_list_ = 0x%x" % mempool_list_)
                 break
@@ -360,7 +360,7 @@ def get_mempool_list_():
 # .text:090ACF7D                 mov     dword ptr [esp], offset aVnetProxyMainT ; "vnet-proxy main thread"
 # => sub_090ACE90 == socks_proxy_server_start
 def rename_socks_proxy_server_start():
-    return rename_function_by_aString_being_used("aVnetProxyMainT", "socks_proxy_server_start", xref_func=MyLastXrefTo)
+    return rename_function_by_aString_being_used("aVnetProxyMainT", "socks_proxy_server_start", xref_func=last_xref)
 
 # All aSYouDoNotHaveA xrefs points to process_create so we take the first one
 #
@@ -417,12 +417,12 @@ def find_lina_signature_check():
     res = rename_function_by_aString_being_used(
                 "aCode_sign_veri",
                 "code_sign_verify_signature_image",
-                xref_func=MyFirstXrefTo)
+                xref_func=first_xref)
     if not res:
         res = rename_function_by_aString_being_used(
                 "aCodeSignVerify",
                 "code_sign_verify_signature_image",
-                xref_func=MyFirstXrefTo)
+                xref_func=first_xref)
 
     if not res:
         logmsg("Failed to find code_sign_verify_signature_image()")
@@ -430,7 +430,7 @@ def find_lina_signature_check():
 
     # Now check we find a "jz" a few instructions after
     # "call code_sign_verify_signature_image"
-    addr = MyLocByName("code_sign_verify_signature_image")
+    addr = name_to_addr("code_sign_verify_signature_image")
     if not addr:
         logmsg("Could not find code_sign_verify_signature_image")
         return False
@@ -446,12 +446,12 @@ def find_lina_signature_check():
         e = addr
         bFound = False
         # XXX - instead of counting to 4, we could just find the basic block  
-        # and test the instruction at block.endEA?
+        # and test the instruction at block.end_ea?
         while count <= 4:
-            e = NextHead(e)
+            e = next_head(e)
             print(GetDisasm(e))
             if GetDisasm(e).startswith("jz") or GetDisasm(e).startswith("jnz"):
-                MyMakeName(e, "jz_after_code_sign_verify_signature_image")
+                rename_address(e, "jz_after_code_sign_verify_signature_image")
                 logmsg("jz_after_code_sign_verify_signature_image = 0x%x" % e)
                 bFound = True
                 break
@@ -495,4 +495,4 @@ if __name__ == '__main__':
     # (.id0, .id1, etc.) will not packed and nothing is saved into the .idb.
     # This allows us to cleanly exit IDA upon completion
     if "DO_EXIT" in os.environ:
-        Exit(1)
+        qexit(1)
