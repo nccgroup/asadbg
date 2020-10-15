@@ -401,6 +401,8 @@ def main_lina():
     # debug shell
     rename_socks_proxy_server_start()
     rename_aaa_admin_authenticate()
+    
+    print("[+] Done")
 
 ##################################################
 ################## lina_monitor ##################
@@ -464,6 +466,7 @@ def find_lina_signature_check():
 
 def main_lina_monitor():
     find_lina_signature_check()
+    print("[+] Done")
 
 ##################################################
 ###################### libc ######################
@@ -472,6 +475,7 @@ def main_lina_monitor():
 def main_libc():
     # We currently only rely on __libc_free, which is exported
     pass
+    print("[+] Done")
 
 ##################################################
 ###################### main ######################
