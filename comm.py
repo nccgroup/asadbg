@@ -526,9 +526,9 @@ def boot_router_cli_non_rooted(ser, boot_firmware, boot_config=None):
             "a list of available commands." in data or \
             "ciscoasa>" in data:
             logmsg("CLI detected - boot finished.")
-            break
-        if "Remote debugging using /dev/ttyS0" in data or \
-            "/dev/ttyS0" in data:
+            breakX
+        if "dosfsck(/dev/hda1) returned 0" in data:
+            time.sleep(10)
             logmsg("gdb detected - boot finished.")
             break
         # for a firmware with serial shell enabled, we never get a Cisco CLI but
